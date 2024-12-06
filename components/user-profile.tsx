@@ -1,3 +1,12 @@
+import { SignOutButton, useUser } from "@clerk/nextjs"
+import {
+    LogOut,
+    Settings,
+    User
+} from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+
 import {
     Avatar,
     AvatarFallback,
@@ -14,15 +23,6 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import config from "@/config"
-import { SignOutButton, useUser } from "@clerk/nextjs"
-import {
-    CreditCard,
-    LogOut,
-    Settings,
-    User
-} from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
 
 export function UserProfile() {
     const router = useRouter()

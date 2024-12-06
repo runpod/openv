@@ -1,7 +1,8 @@
-import { Button } from '@/components/ui/button';
-import NavBar from '@/components/wrapper/navbar';
 import Link from 'next/link';
 import Stripe from 'stripe';
+
+import { Button } from '@/components/ui/button';
+import NavBar from '@/components/wrapper/navbar';
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);

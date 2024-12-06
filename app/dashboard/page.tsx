@@ -1,7 +1,9 @@
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowUpRight } from 'lucide-react'
 import Link from 'next/link'
+
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+
 import { BarChartComponent } from './_components/bar-chart'
 import { BarChartBetter } from './_components/bar-chart-better'
 

@@ -1,8 +1,9 @@
 "use client"
-import PageWrapper from "@/components/wrapper/page-wrapper";
-import config from "@/config";
 import { UserProfile } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+
+import PageWrapper from "@/components/wrapper/page-wrapper";
+import config from "@/config";
 
 const UserProfilePage = () => {
     const router = useRouter()

@@ -1,6 +1,8 @@
-import { TITLE_TAILWIND_CLASS } from '@/utils/constants'
 import Image from 'next/image'
 import Link from "next/link"
+
+import { TITLE_TAILWIND_CLASS } from '@/utils/constants'
+
 export default function BlogSample() {
 
   const articles = [

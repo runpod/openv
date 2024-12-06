@@ -1,6 +1,5 @@
 "use client"
 
-import { Separator } from '@/components/ui/separator'
 import clsx from 'clsx'
 import {
   Banknote,
@@ -10,7 +9,8 @@ import {
 } from "lucide-react"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FaTasks } from 'react-icons/fa'
+
+import { Separator } from '@/components/ui/separator'
 
 export default function DashboardSideBar() {
   const pathname = usePathname();

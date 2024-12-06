@@ -1,9 +1,11 @@
 import { ArrowRight, Github } from 'lucide-react';
+import Image from 'next/image';
 import Link from "next/link";
+
+import { TITLE_TAILWIND_CLASS } from '@/utils/constants';
+
 import { BorderBeam } from "../magicui/border-beam";
 import { Button } from "../ui/button";
-import Image from 'next/image';
-import { TITLE_TAILWIND_CLASS } from '@/utils/constants';
 
 export default function HeroSection() {
     return (
