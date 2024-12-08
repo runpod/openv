@@ -15,26 +15,23 @@ import { cn } from "@/lib/utils";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-	metadataBase: new URL("https://starter.rasmic.xyz"),
+	metadataBase: new URL("https://openv.ai"),
 	title: {
-		default: "Nextjs Starter Kit",
-		template: `%s | Nextjs Starter Kit`,
+		default: "OpenV",
+		template: `%s | OpenV`,
 	},
-	description:
-		"The Ultimate Nextjs 14 Starter Kit for quickly building your SaaS, giving you time to focus on what really matters",
+	description: "Generate videos using open source AI models",
 	openGraph: {
-		description:
-			"The Ultimate Nextjs 14 Starter Kit for quickly building your SaaS, giving you time to focus on what really matters",
+		description: "Generate videos using open source AI models",
 		images: ["https://utfs.io/f/8a428f85-ae83-4ca7-9237-6f8b65411293-eun6ii.png"],
-		url: "https://starter.rasmic.xyz/",
+		url: "https://openv.ai/",
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "Nextjs Starter Kit",
-		description:
-			"The Ultimate Nextjs 14 Starter Kit for quickly building your SaaS, giving you time to focus on what really matters",
+		title: "OpenV",
+		description: "Generate videos using open source AI models",
 		siteId: "",
-		creator: "@rasmic",
+		creator: "@runpod",
 		creatorId: "",
 		images: ["https://utfs.io/f/8a428f85-ae83-4ca7-9237-6f8b65411293-eun6ii.png"],
 	},

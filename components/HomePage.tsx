@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 import { Toaster } from "@/components/ui/toaster";
 
-import Header from "./Header";
 import InspirationGrid from "./InspirationGrid";
 import PromptInput from "./PromptInput";
 import SettingsSidebar from "./SettingsSidebar";
@@ -55,8 +54,7 @@ export default function HomePage() {
 	const [prompt, setPrompt] = useState("");
 	const [gridView, setGridView] = useState<GridView>("2x2");
 	const [searchQuery, setSearchQuery] = useState("");
-	const [, setHealthStatus] = useState<HealthStatus | null>(null);
-	const [, setEnvVarsSet] = useState<boolean | null>(null);
+	const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
 	const [videoSettings, setVideoSettings] = useState<VideoSettingsType>({
 		negativePrompt: "",
 		width: 848,
@@ -76,9 +74,8 @@ export default function HomePage() {
 
 	useEffect(() => {
 		setMounted(true);
-		fetchHealthStatus();
-		checkEnvVars();
 		loadVideosFromLocalStorage();
+		fetchHealthStatus();
 	}, []);
 
 	useEffect(() => {
@@ -102,28 +99,15 @@ export default function HomePage() {
 
 	const fetchHealthStatus = async () => {
 		try {
-			const response = await fetch("/api/runpod-jobs");
+			const response = await fetch("/api/runpod");
 			if (!response.ok) {
 				throw new Error("Failed to fetch health status");
 			}
 			const data = await response.json();
+			console.log("RunPod Health Status:", data);
 			setHealthStatus(data);
 		} catch (error) {
 			console.error("Error fetching health status:", error);
-		}
-	};
-
-	const checkEnvVars = async () => {
-		try {
-			const response = await fetch("/api/check-env-vars");
-			if (!response.ok) {
-				throw new Error("Failed to check environment variables");
-			}
-			const data = await response.json();
-			setEnvVarsSet(data.set);
-		} catch (error) {
-			console.error("Error checking environment variables:", error);
-			setEnvVarsSet(false);
 		}
 	};
 
@@ -138,7 +122,7 @@ export default function HomePage() {
 		setQueue(prevQueue => [...prevQueue, newQueueItem]);
 
 		try {
-			const response = await fetch("/api/runpod-jobs", {
+			const response = await fetch("/api/runpod", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -211,7 +195,7 @@ export default function HomePage() {
 
 	const checkJobStatus = async (jobId: string) => {
 		try {
-			const response = await fetch(`/api/runpod-jobs/${jobId}`);
+			const response = await fetch(`/api/runpod/${jobId}`);
 			if (!response.ok) {
 				throw new Error("Failed to fetch job status");
 			}
@@ -272,9 +256,8 @@ export default function HomePage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-background text-foreground flex flex-col">
-			<Header />
-			<div className="flex flex-grow">
+		<div className="h-full min-h-screen w-full bg-background text-foreground">
+			<div className="flex h-full">
 				<div className="flex-grow">
 					<div className="sticky top-0 z-10 bg-background p-4">
 						<PromptInput

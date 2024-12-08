@@ -27,7 +27,7 @@ export default function DashboardTopNav({ children }: { children: ReactNode }) {
           <SheetContent side="left">
             <SheetHeader>
               <Link href="/">
-                <SheetTitle>Nextjs Starter Kit</SheetTitle>
+                <SheetTitle>Nextjs Starter Kit top nav</SheetTitle>
               </Link>
             </SheetHeader>
             <div className="flex flex-col space-y-3 mt-[1rem]">

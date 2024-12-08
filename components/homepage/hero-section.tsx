@@ -31,7 +31,7 @@ export default function HeroSection() {
 			<div className="flex flex-col items-center">
 				<span className="relative mt-10 p-4">
 					<div className="relative">
-						<Link href={userId ? "/generate" : "/sign-in"}>
+						<Link href={userId ? "/app" : "/sign-in"}>
 							<Button size={null} className="px-8 py-6 font-semibold text-4xl">
 								Free*
 							</Button>
