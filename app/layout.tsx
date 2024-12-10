@@ -9,7 +9,6 @@ import { ReactNode } from "react";
 
 import Provider from "@/app/provider";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -52,7 +51,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 					as="image"
 				/>
 			</head>
-			<body className={cn("min-h-screen bg-background font-sans antialiased", inter.className)}>
+			<body
+				className={cn("min-h-screen bg-background font-sans antialiased", inter.className)}
+			>
 				<ClerkProvider>
 					<Provider>
 						<ThemeProvider
@@ -62,7 +63,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 							disableTransitionOnChange
 						>
 							{children}
-							<Toaster />
 						</ThemeProvider>
 					</Provider>
 				</ClerkProvider>

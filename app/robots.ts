@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: '/dashboard/',
+      disallow: '/my-videos/',
     },
-    sitemap: 'https://starter.rasmic.xyz/sitemap.xml',
+    sitemap: '',
   }
 }

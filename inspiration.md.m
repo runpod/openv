@@ -1,0 +1,4 @@
+- inspiration copy
+- star the best videos
+- newest videos first
+- share

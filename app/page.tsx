@@ -1,12 +1,15 @@
-import HeroSection from "@/components/homepage/hero-section";
-import PageWrapper from "@/components/wrapper/page-wrapper";
+import HeroSection from "@/components/hero-section";
+import { Logo } from "@/components/ui/logo";
 
 export default function Home() {
 	return (
-		<PageWrapper>
-			<div className="flex min-h-[calc(100vh-8rem)] items-center justify-center w-full">
+		<div className="min-h-screen relative">
+			<div className="absolute top-4 left-4">
+				<Logo />
+			</div>
+			<div className="flex items-center justify-center w-full h-full min-h-screen">
 				<HeroSection />
 			</div>
-		</PageWrapper>
+		</div>
 	);
 }

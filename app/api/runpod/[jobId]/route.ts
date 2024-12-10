@@ -1,36 +1,48 @@
-import { NextResponse } from 'next/server'
-import runpodSdk from 'runpod-sdk'
+import { NextResponse } from 'next/server';
+import runpodSdk from 'runpod-sdk';
 
-export function GET(
-  request: Request,
-  { params }: { params: { jobId: string } }
+// Initialize RunPod client
+const runpod = runpodSdk(process.env.RUNPOD_API_KEY!);
+
+export async function GET(
+  request: Request, 
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
-  const API_KEY = process.env.RUNPOD_API_KEY
-  const ENDPOINT_ID = process.env.RUNPOD_ENDPOINT_ID
-
-  if (!API_KEY || !ENDPOINT_ID) {
-    return NextResponse.json({ error: 'RunPod configuration is missing' }, { status: 500 })
+  const { jobId } = await params;
+  
+  if (!jobId) {
+    return NextResponse.json(
+      { error: "Job ID is required" }, 
+      { status: 400 }
+    );
   }
 
-  const { jobId } = params
+  if (!process.env.RUNPOD_API_KEY || !process.env.RUNPOD_ENDPOINT_ID) {
+    console.error('Missing RunPod configuration');
+    return NextResponse.json(
+      { error: "Server configuration error" }, 
+      { status: 500 }
+    );
+  }
 
   try {
-    const runpod = runpodSdk(API_KEY)
-    const endpoint = runpod.endpoint(ENDPOINT_ID)
-
-    if (!endpoint) {
-      return NextResponse.json({ error: 'Failed to connect to RunPod endpoint' }, { status: 500 })
+    const result = await runpod.endpoint(process.env.RUNPOD_ENDPOINT_ID).status(jobId);
+    
+    if ('error' in result) {
+      console.error('RunPod API error:', result.error);
+      return NextResponse.json(
+        { error: result.error }, 
+        { status: 500 }
+      );
     }
 
-    return endpoint.status(jobId).then(status => {
-      return NextResponse.json(status)
-    }).catch(error => {
-      console.error('Error fetching RunPod job status:', error)
-      return NextResponse.json({ error: 'Failed to fetch RunPod job status' }, { status: 500 })
-    })
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Error initializing RunPod:', error)
-    return NextResponse.json({ error: 'Failed to initialize RunPod' }, { status: 500 })
+    console.error('RunPod status error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to fetch status" }, 
+      { status: 500 }
+    );
   }
 }
 

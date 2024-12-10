@@ -10,6 +10,15 @@ from Supabase managed with Prisma and authentication with Clerk.
 -   Prefer iteration and modularization over code duplication
 -   Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
 -   Structure files: exported component, subcomponents, helpers, static content, types
+-   Always use full imports with @/ prefix (e.g., '@/components/my-component'), never relative imports
+
+## Component File Structure
+
+-   Place components directly in the components directory with kebab-case names (e.g., `my-component.tsx`)
+-   Avoid the barrel/index pattern (no component folders with index.tsx)
+-   Group related components by feature/domain in subdirectories when needed
+-   Keep component files flat and avoid unnecessary nesting
+-   Co-locate component-specific types, utilities, and hooks in the same file unless they are shared
 
 ## Naming Conventions
 
