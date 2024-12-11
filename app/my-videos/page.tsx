@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 
 import { PromptInput } from "@/components/prompt-input";
-import { Logo } from "@/components/ui/logo";
 import { Toaster } from "@/components/ui/toaster";
 import VideoGrid from "@/components/video-grid";
 import { useVideosStore } from "@/hooks/use-videos-store";
@@ -168,31 +167,24 @@ export default function MyVideosPage() {
 			<div className="flex h-full">
 				<div className="flex-grow">
 					<div className="sticky top-0 z-10 bg-background p-4">
-						<div className="flex items-center">
-							<div className="w-[200px]">
-								<Logo />
-							</div>
-							<div className="flex-1">
-								<div className="max-w-screen-xl mx-auto">
-									<PromptInput
-										prompt={prompt}
-										setPrompt={setPrompt}
-										onGenerate={handleGenerate}
-										isGenerating={isGenerating}
-										processingCount={getProcessingCount()}
-										videoSettings={videoSettings}
-										setVideoSettings={setVideoSettings}
-										seed={seed}
-										setSeed={setSeed}
-										isRandomSeed={isRandomSeed}
-										setIsRandomSeed={setIsRandomSeed}
-										queueItems={queueItems}
-									/>
-								</div>
-							</div>
+						<div className="max-w-screen-xl mx-auto">
+							<PromptInput
+								prompt={prompt}
+								setPrompt={setPrompt}
+								onGenerate={handleGenerate}
+								isGenerating={isGenerating}
+								processingCount={getProcessingCount()}
+								videoSettings={videoSettings}
+								setVideoSettings={setVideoSettings}
+								seed={seed}
+								setSeed={setSeed}
+								isRandomSeed={isRandomSeed}
+								setIsRandomSeed={setIsRandomSeed}
+								queueItems={queueItems}
+							/>
 						</div>
 					</div>
-					<div className="py-4 px-4 lg:px-32 xl:px-64">
+					<div className="py-4 px-4 xl:px-0 2xl:px-16">
 						<VideoGrid
 							videos={videos}
 							gridView={gridView}

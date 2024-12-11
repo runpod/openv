@@ -40,6 +40,7 @@ const defaultSettings: VideoSettings = {
 	steps: 40,
 	cfg: 6,
 	numFrames: 31,
+	seed: 42,
 };
 
 export const useVideosStore = create<VideosState>()(

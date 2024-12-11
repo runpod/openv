@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-interface QueueItem {
+export interface QueueItem {
 	id: string;
 	prompt: string;
 	status: "queued" | "processing" | "completed";

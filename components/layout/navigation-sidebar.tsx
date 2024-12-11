@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Logo } from "@/components/ui/logo";
 import {
 	Sidebar,
 	SidebarContent,
@@ -37,7 +38,10 @@ export function NavigationSidebar() {
 
 	return (
 		<Sidebar collapsible="icon">
-			<SidebarContent className="mt-10">
+			<SidebarContent>
+				<div className="mb-6 mt-12 flex justify-center">
+					<Logo />
+				</div>
 				{/* Main Navigation */}
 				<SidebarGroup>
 					<SidebarGroupLabel>Navigation</SidebarGroupLabel>
