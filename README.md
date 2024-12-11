@@ -4,7 +4,7 @@
 
 ## Models
 
-- Mochi 1
+- [Mochi 1](https://github.com/genmoai/mochi)
 
 ## Development
 
