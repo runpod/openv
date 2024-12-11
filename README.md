@@ -4,7 +4,7 @@
 
 ## Models
 
-- [Mochi 1](https://github.com/genmoai/mochi) by Genmo
+- [Mochi 1](https://github.com/genmoai/mochi) by [Genmo](https://www.genmo.ai/)
 
 ## Development
 
