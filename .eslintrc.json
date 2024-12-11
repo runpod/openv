@@ -2,6 +2,7 @@
   "extends": "next/core-web-vitals",
   "plugins": ["unused-imports", "simple-import-sort", "import"],
   "rules": {
+    "react/no-unescaped-entities": "off",
     "no-unused-vars": "off",
     "@typescript-eslint/no-unused-vars": "off",
     "unused-imports/no-unused-imports": "error",

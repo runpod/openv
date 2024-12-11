@@ -9,7 +9,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { useVideosStore } from "@/hooks/use-videos-store";
 import { cn } from "@/lib/utils";
 
 type SortOption = "newest" | "oldest" | "name_asc" | "name_desc";
@@ -19,6 +18,8 @@ type VideoControlsProps = {
 	setSearchQuery: (query: string) => void;
 	sortOption: SortOption;
 	setSortOption: (option: SortOption) => void;
+	gridView: "2x2" | "3x3" | "list";
+	setGridView: (view: "2x2" | "3x3" | "list") => void;
 };
 
 const VideoControls: React.FC<VideoControlsProps> = ({
@@ -26,9 +27,9 @@ const VideoControls: React.FC<VideoControlsProps> = ({
 	setSearchQuery,
 	sortOption,
 	setSortOption,
+	gridView,
+	setGridView,
 }) => {
-	const { gridView, setGridView } = useVideosStore();
-
 	return (
 		<div className="flex items-center justify-end gap-2">
 			<div className="flex items-center gap-1">

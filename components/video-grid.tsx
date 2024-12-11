@@ -1,5 +1,6 @@
 import React from "react";
 
+import { cn } from "@/lib/utils";
 import { Video } from "@/types";
 
 import VideoCard from "./video-card";
@@ -22,6 +23,7 @@ interface VideoGridProps {
 const VideoGrid: React.FC<VideoGridProps> = ({
 	videos = [],
 	gridView,
+	setGridView,
 	searchQuery,
 	setSearchQuery,
 	onDelete,
@@ -32,11 +34,11 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 	const getGridClass = () => {
 		switch (gridView) {
 			case "2x2":
-				return "grid grid-cols-1 sm:grid-cols-2";
+				return "grid grid-cols-1 sm:grid-cols-2 gap-6";
 			case "3x3":
-				return "grid grid-cols-2 sm:grid-cols-4";
+				return "grid grid-cols-2 sm:grid-cols-4 gap-6";
 			case "list":
-				return "flex flex-col";
+				return "flex flex-col space-y-1";
 			default:
 				return "grid-cols-1 sm:grid-cols-2";
 		}
@@ -63,16 +65,19 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 
 	return (
 		<div className="bg-[hsl(var(--section-background))] rounded-lg">
-			<div className="flex justify-start items-center p-4">
+			<div className="flex items-center gap-6 p-4">
+				<h3 className="text-lg font-semibold shrink-0">My Videos</h3>
 				<VideoControls
 					searchQuery={searchQuery}
 					setSearchQuery={setSearchQuery}
 					sortOption={sortOption}
 					setSortOption={setSortOption}
+					gridView={gridView}
+					setGridView={setGridView}
 				/>
 			</div>
 
-			<div className="p-4">
+			<div className={cn("p-4", gridView === "list" && "px-2")}>
 				{!Array.isArray(videos) || videos.length === 0 ? (
 					<p className="text-center text-muted-foreground py-8">No videos yet :(</p>
 				) : sortedVideos.length === 0 ? (
@@ -82,7 +87,7 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 				) : (
 					<div
 						className={`${getGridClass()} ${
-							gridView === "list" ? "space-y-4" : "gap-4"
+							gridView === "list" ? "space-y-1" : "gap-4"
 						} w-full`}
 					>
 						{sortedVideos.map(video => (
@@ -91,6 +96,7 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 								video={video}
 								onDelete={onDelete}
 								onCopySettings={onCopySettings}
+								isListView={gridView === "list"}
 							/>
 						))}
 					</div>

@@ -42,4 +42,5 @@ export type VideoSettings = {
 	steps: number;
 	cfg: number;
 	numFrames: number;
+	seed: number;
 };
