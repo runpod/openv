@@ -33,7 +33,7 @@ export default function HeroSection() {
 					<div className="relative">
 						<Link href={userId ? "/my-videos" : "/sign-in"}>
 							<Button size={null} className="px-8 py-6 font-semibold text-4xl">
-								Free*
+								Try for free*
 							</Button>
 						</Link>
 					</div>
