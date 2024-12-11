@@ -29,6 +29,8 @@ interface VideosState {
 	addVideo: (video: Video) => void;
 	updateVideoJobId: (id: string, jobId: string) => void;
 	getProcessingCount: () => number;
+	deleteVideo: (id: string) => void;
+	setVideoSettings: (settings: VideoSettings) => void;
 }
 
 const defaultSettings: VideoSettings = {
@@ -69,7 +71,6 @@ export const useVideosStore = create<VideosState>()(
 					videos: state.videos.map(v =>
 						v.id === id ? { ...v, status, url: url || v.url } : v
 					),
-					isGenerating: state.videos.some(v => v.status === "generating"),
 				})),
 
 			addVideo: video =>
@@ -94,6 +95,13 @@ export const useVideosStore = create<VideosState>()(
 				const state = get();
 				return state.videos.filter(v => v.status === "generating").length;
 			},
+
+			deleteVideo: id =>
+				set(state => ({
+					videos: state.videos.filter(v => v.id !== id),
+				})),
+
+			setVideoSettings: settings => set({ videoSettings: settings }),
 		}),
 		{
 			name: "videos-storage",

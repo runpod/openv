@@ -36,7 +36,7 @@ export function NavigationSidebar() {
 	const { user } = useUser();
 
 	return (
-		<Sidebar>
+		<Sidebar collapsible="icon">
 			<SidebarContent className="mt-10">
 				{/* Main Navigation */}
 				<SidebarGroup>

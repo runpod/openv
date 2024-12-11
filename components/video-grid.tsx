@@ -1,6 +1,5 @@
 import React from "react";
 
-import { useVideosStore } from "@/hooks/use-videos-store";
 import { Video } from "@/types";
 
 import VideoCard from "./video-card";
@@ -23,7 +22,6 @@ interface VideoGridProps {
 const VideoGrid: React.FC<VideoGridProps> = ({
 	videos = [],
 	gridView,
-	setGridView,
 	searchQuery,
 	setSearchQuery,
 	onDelete,
@@ -31,8 +29,6 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 	sortOption,
 	setSortOption,
 }) => {
-	const { gridView: storeGridView } = useVideosStore();
-
 	const getGridClass = () => {
 		switch (gridView) {
 			case "2x2":
@@ -67,7 +63,7 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 
 	return (
 		<div className="bg-[hsl(var(--section-background))] rounded-lg">
-			<div className="flex justify-end items-center p-2">
+			<div className="flex justify-start items-center p-4">
 				<VideoControls
 					searchQuery={searchQuery}
 					setSearchQuery={setSearchQuery}
