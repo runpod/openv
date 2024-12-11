@@ -2,10 +2,17 @@
 
 > Generate videos using open source AI models
 
+## Models
+
+- Mochi 1
+
 ## Development
 
-For local development setup and configuration instructions, please check out the [Contributing Guide](.github/CONTRIBUTING.md).
+For local development setup and configuration instructions, please check out the
+[Contributing Guide](.github/CONTRIBUTING.md).
 
 ## Credits
 
-This project uses [michaelshimeles/nextjs-starter-kit](https://github.com/michaelshimeles/nextjs-starter-kit) as its foundation.
+This project uses
+[michaelshimeles/nextjs-starter-kit](https://github.com/michaelshimeles/nextjs-starter-kit) as its
+foundation.
