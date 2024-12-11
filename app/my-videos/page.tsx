@@ -82,7 +82,7 @@ export default function MyVideosPage() {
 					console.error(`💥 Error polling status for video ${video.id}:`, error);
 				}
 			}
-		}, 5000);
+		}, 20000);
 
 		return () => clearInterval(interval);
 	}, [videos, updateVideoStatus]);
