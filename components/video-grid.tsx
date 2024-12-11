@@ -8,18 +8,22 @@ import VideoControls from "./video-controls";
 
 export type SortOption = "newest" | "oldest" | "name_asc" | "name_desc";
 
-type VideoGridProps = {
+interface VideoGridProps {
 	videos: Video[];
+	gridView: "2x2" | "3x3" | "list";
+	setGridView: (view: "2x2" | "3x3" | "list") => void;
 	searchQuery: string;
 	setSearchQuery: (query: string) => void;
 	onDelete: (id: string) => void;
-	onCopySettings: (video: Video) => void;
-	sortOption: SortOption;
-	setSortOption: (option: SortOption) => void;
-};
+	onCopySettings: (video: { prompt: string; frames: number; seed: number }) => void;
+	sortOption: "newest" | "oldest" | "name_asc" | "name_desc";
+	setSortOption: (option: "newest" | "oldest" | "name_asc" | "name_desc") => void;
+}
 
 const VideoGrid: React.FC<VideoGridProps> = ({
 	videos = [],
+	gridView,
+	setGridView,
 	searchQuery,
 	setSearchQuery,
 	onDelete,
@@ -27,7 +31,7 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 	sortOption,
 	setSortOption,
 }) => {
-	const { gridView } = useVideosStore();
+	const { gridView: storeGridView } = useVideosStore();
 
 	const getGridClass = () => {
 		switch (gridView) {

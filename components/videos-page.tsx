@@ -14,13 +14,10 @@ type SortOption = "newest" | "oldest" | "name_asc" | "name_desc";
 export default function VideosPage() {
 	const {
 		videos,
-		setVideos,
 		isGenerating,
 		setIsGenerating,
 		prompt,
 		setPrompt,
-		isSettingsOpen,
-		setIsSettingsOpen,
 		videoSettings,
 		addVideo,
 		updateVideoJobId,
@@ -31,6 +28,7 @@ export default function VideosPage() {
 	const [mounted, setMounted] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [sortOption, setSortOption] = useState<SortOption>("newest");
+	const [gridView, setGridView] = useState<"2x2" | "3x3" | "list">("3x3");
 
 	useEffect(() => {
 		setMounted(true);
@@ -148,7 +146,6 @@ export default function VideosPage() {
 							prompt={prompt}
 							setPrompt={setPrompt}
 							onGenerate={handleGenerate}
-							onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
 							isGenerating={isGenerating}
 							processingCount={getProcessingCount()}
 						/>
@@ -156,6 +153,8 @@ export default function VideosPage() {
 					<div className="py-4">
 						<VideoGrid
 							videos={videos}
+							gridView={gridView}
+							setGridView={setGridView}
 							searchQuery={searchQuery}
 							setSearchQuery={setSearchQuery}
 							onDelete={id => {

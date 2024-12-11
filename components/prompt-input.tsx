@@ -6,21 +6,20 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-type PromptInputProps = {
+interface PromptInputProps {
 	prompt: string;
 	setPrompt: (prompt: string) => void;
 	onGenerate: () => void;
-	onToggleSettings: () => void;
 	isGenerating: boolean;
 	processingCount: number;
 	children?: React.ReactNode;
-};
+	onToggleSettings?: () => void;
+}
 
 export default function PromptInput({
 	prompt,
 	setPrompt,
 	onGenerate,
-	onToggleSettings,
 	isGenerating,
 	processingCount,
 	children,

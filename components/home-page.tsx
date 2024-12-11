@@ -11,17 +11,12 @@ import { type Video } from "@/types";
 export default function HomePage() {
 	const {
 		videos,
-		queue,
 		prompt,
 		setPrompt,
 		isGenerating,
 		setIsGenerating,
-		isQueued,
-		setIsQueued,
+		getProcessingCount,
 		videoSettings,
-		isSettingsOpen,
-		setIsSettingsOpen,
-		healthStatus,
 		setHealthStatus,
 		gridView,
 		setGridView,
@@ -35,7 +30,6 @@ export default function HomePage() {
 		addVideo,
 		updateVideoJobId,
 		updateVideoStatus,
-		addToQueue,
 	} = useVideosStore();
 
 	const [mounted, setMounted] = useState(false);
@@ -76,7 +70,6 @@ export default function HomePage() {
 		if (!prompt) return;
 
 		setIsGenerating(true);
-		setIsQueued(true);
 
 		const id = new Date().getTime().toString();
 		const currentSeed = isRandomSeed ? Math.floor(Math.random() * 1000000) : seed;
@@ -90,10 +83,10 @@ export default function HomePage() {
 			status: "generating",
 			enhancePrompt: false,
 			jobId: "",
+			createdAt: new Date().toISOString(),
 		};
 
 		addVideo(newVideo);
-		addToQueue(newVideo);
 
 		try {
 			const response = await fetch("/api/runpod", {
@@ -128,7 +121,6 @@ export default function HomePage() {
 			console.error("Error generating video:", error);
 			updateVideoStatus(id, "failed");
 			setIsGenerating(false);
-			setIsQueued(false);
 		}
 
 		if (isRandomSeed) {
@@ -174,9 +166,8 @@ export default function HomePage() {
 					prompt={prompt}
 					setPrompt={setPrompt}
 					onGenerate={handleGenerate}
-					onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
 					isGenerating={isGenerating}
-					isQueued={isQueued}
+					processingCount={getProcessingCount()}
 				/>
 			</div>
 			<div className="flex-1 overflow-y-auto">

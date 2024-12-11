@@ -46,7 +46,8 @@ export default function InspirationGrid({
 			seed: item.seed,
 			status: "completed",
 			enhancePrompt: item.enhancePrompt,
-			enhancedPromptText: item.enhancedPromptText,
+			jobId: "",
+			createdAt: new Date().toISOString(),
 		});
 		setCopiedSettings(item.title);
 		setTimeout(() => setCopiedSettings(null), 1000);
