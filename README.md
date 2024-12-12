@@ -6,6 +6,10 @@
 
 - [Mochi 1](https://github.com/genmoai/mochi) by [Genmo](https://www.genmo.ai/)
 
+## Documentation
+
+- [Technical Flow](docs/technical-flow.md) - System architecture and component interaction diagrams
+
 ## Development
 
 For local development setup and configuration instructions, please check out the
