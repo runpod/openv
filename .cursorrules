@@ -5,77 +5,116 @@ from Supabase managed with Prisma and authentication with Clerk.
 
 ## Code Style and Structure
 
--   Write concise, technical TypeScript code with accurate examples
--   Use functional and declarative programming patterns; avoid classes
--   Prefer iteration and modularization over code duplication
--   Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
--   Structure files: exported component, subcomponents, helpers, static content, types
--   Always use full imports with @/ prefix (e.g., '@/components/my-component'), never relative imports
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
+- Structure files: exported component, subcomponents, helpers, static content, types
+- Always use full imports with @/ prefix (e.g., '@/components/my-component'), never relative imports
 
 ## Component File Structure
 
--   Place components directly in the components directory with kebab-case names (e.g., `my-component.tsx`)
--   Avoid the barrel/index pattern (no component folders with index.tsx)
--   Group related components by feature/domain in subdirectories when needed
--   Keep component files flat and avoid unnecessary nesting
--   Co-locate component-specific types, utilities, and hooks in the same file unless they are shared
+- Place components directly in the components directory with kebab-case names (e.g.,
+  `my-component.tsx`)
+- Avoid the barrel/index pattern (no component folders with index.tsx)
+- Group related components by feature/domain in subdirectories when needed
+- Keep component files flat and avoid unnecessary nesting
+- Co-locate component-specific types, utilities, and hooks in the same file unless they are shared
 
 ## Naming Conventions
 
--   Use lowercase with dashes for directories (e.g., components/auth-wizard)
--   Favor named exports for components
+- Use lowercase with dashes for directories (e.g., components/auth-wizard)
+- Favor named exports for components
 
 ## TypeScript Usage
 
--   Use TypeScript for all code; prefer interfaces over types
--   Avoid enums; use maps instead
--   Use functional components with TypeScript interfaces
+- Use TypeScript for all code; prefer interfaces over types
+- Avoid enums; use maps instead
+- Use functional components with TypeScript interfaces
 
 ## Syntax and Formatting
 
--   Use the "function" keyword for pure functions
--   Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements
--   Use declarative JSX
+- Use the "function" keyword for pure functions
+- Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements
+- Use declarative JSX
 
 ## UI and Styling
 
--   Use Shadcn UI, Radix, and Tailwind for components and styling
--   Implement responsive design with Tailwind CSS; use a mobile-first approach
+- Use Shadcn UI, Radix, and Tailwind for components and styling
+- Implement responsive design with Tailwind CSS; use a mobile-first approach
 
 ## Performance Optimization
 
--   Minimize 'use client', 'useEffect', and 'setState'; favor React Server Components (RSC)
--   Wrap client components in Suspense with fallback
--   Use dynamic loading for non-critical components
--   Optimize images: use WebP format, include size data, implement lazy loading.
+- Minimize 'use client', 'useEffect', and 'setState'; favor React Server Components (RSC)
+- Wrap client components in Suspense with fallback
+- Use dynamic loading for non-critical components
+- Optimize images: use WebP format, include size data, implement lazy loading.
 
 ## Tools
 
--   use `npx shadcn@latest add` to install shadcn components
+- use `npx shadcn@latest add` to install shadcn components
+
+## Database Conventions with Prisma
+
+- Use PascalCase for model names
+- Use camelCase for field names
+- Add appropriate indexes for frequently queried fields
+- Include timestamps (createdAt, updatedAt) on all models
+- Use explicit relations with references
+- Keep the schema.prisma file well-documented
+- Use appropriate field types and constraints
+
+## Authentication with Clerk
+
+- Use middleware for global route protection:
+
+    ```typescript
+    import { clerkMiddleware } from "@clerk/nextjs/server";
+
+    export default clerkMiddleware();
+
+    export const config = {
+    	matcher: [
+    		"/((?!_next|[^?]*\\.(jpg|jpeg|gif|png|svg|ico|css|js|woff2?|map)$).*)",
+    		"/api/:path*",
+    	],
+    };
+    ```
+
+- Always import auth and currentUser from server package:
+    ```typescript
+    import { auth, currentUser } from "@clerk/nextjs/server";
+    ```
+- Remember auth() and currentUser() are async, always await them:
+    ```typescript
+    const { userId } = await auth();
+    const user = await currentUser();
+    ```
+- Keep auth checks in middleware, not in individual routes
 
 ## TanStack Query Conventions
 
--   Use TanStack Query for client-side data management and caching
--   Structure query keys hierarchically: [entity, identifier, filters]
--   Place query hooks in /hooks/queries and /hooks/mutations directories
--   Name query hooks with 'use' prefix (e.g., useUsers, useCreateUser)
--   Implement error boundaries for query error handling
--   Use prefetchQuery for known data requirements
--   Set consistent staleTime and gcTime in QueryClient provider
--   Implement optimistic updates for mutations when possible
--   Use suspense mode with Suspense boundaries
--   Keep query logic separate from UI components
--   Avoid direct fetch calls when TanStack Query can be used
--   Handle loading and error states consistently across queries
+- Use TanStack Query for client-side data management and caching
+- Structure query keys hierarchically: [entity, identifier, filters]
+- Place query hooks in /hooks/queries and /hooks/mutations directories
+- Name query hooks with 'use' prefix (e.g., useUsers, useCreateUser)
+- Implement error boundaries for query error handling
+- Use prefetchQuery for known data requirements
+- Set consistent staleTime and gcTime in QueryClient provider
+- Implement optimistic updates for mutations when possible
+- Use suspense mode with Suspense boundaries
+- Keep query logic separate from UI components
+- Avoid direct fetch calls when TanStack Query can be used
+- Handle loading and error states consistently across queries
 
 ## Key Conventions
 
--   Use 'nuqs' for URL search parameter state management
--   Optimize Web Vitals (LCP, CLS, FID)
--   Limit 'use client':
-    -   Favor server components and Next.js SSR
-    -   Use only for Web API access in small components
-    -   Avoid for data fetching or state management
--   Comment everything to make it easy for developers and AI to understand
+- Use 'nuqs' for URL search parameter state management
+- Optimize Web Vitals (LCP, CLS, FID)
+- Limit 'use client':
+    - Favor server components and Next.js SSR
+    - Use only for Web API access in small components
+    - Avoid for data fetching or state management
+- Comment everything to make it easy for developers and AI to understand
 
 Follow Next.js docs for Data Fetching, Rendering, and Routing.

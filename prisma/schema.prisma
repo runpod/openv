@@ -71,3 +71,29 @@ model invoices {
   email           String
   user_id         String?
 }
+
+model video {
+  id          Int      @id @default(autoincrement())
+  jobId       String   @unique
+  userId      String
+  prompt      String
+  status      String   @default("queued") // queued, processing, completed, failed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  modelName   String?
+  frames      Int?     // number of frames in the video
+  url         String?
+  error       String?
+  
+  // RunPod input parameters
+  negativePrompt String?
+  width         Int?
+  height        Int?
+  seed          Int?
+  steps         Int?
+  cfg           Float?
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}

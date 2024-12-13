@@ -18,7 +18,7 @@ interface RunPodResponse {
 	status: string;
 	output?: {
 		result: string;
-		downloadUrl: string;
+		url: string;
 	};
 	error?: string;
 }

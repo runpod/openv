@@ -4,11 +4,8 @@ import { useEffect, useState } from "react";
 
 import { PromptInput } from "@/components/prompt-input";
 import { Toaster } from "@/components/ui/toaster";
-import VideoGrid from "@/components/video-grid";
-import { useVideosStore } from "@/hooks/use-videos-store";
-import { Video } from "@/types";
-
-type SortOption = "newest" | "oldest" | "name_asc" | "name_desc";
+import { VideoGrid } from "@/components/video-grid";
+import { useVideosStore } from "@/store/video-store";
 
 export default function MyVideosPage() {
 	const {
@@ -24,31 +21,56 @@ export default function MyVideosPage() {
 		isRandomSeed,
 		setIsRandomSeed,
 		addVideo,
-		updateVideoJobId,
 		updateVideoStatus,
 		getProcessingCount,
 		deleteVideo,
+		initialize,
 	} = useVideosStore();
 
 	const [mounted, setMounted] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
-	const [sortOption, setSortOption] = useState<SortOption>("newest");
+	const [sortOption, setSortOption] = useState<"newest" | "oldest" | "name_asc" | "name_desc">(
+		"newest"
+	);
 	const [gridView, setGridView] = useState<"2x2" | "3x3" | "list">("3x3");
 
+	// Initialize store and set mounted state
 	useEffect(() => {
-		setMounted(true);
-	}, []);
+		initialize().then(() => setMounted(true));
+	}, [initialize]);
 
 	// Poll for video status updates
 	useEffect(() => {
 		const interval = setInterval(async () => {
-			const generatingVideos = videos.filter(v => v.status === "generating" && v.jobId);
+			const processingVideos = videos.filter(
+				v => v.status === "queued" || v.status === "processing"
+			);
 
-			for (const video of generatingVideos) {
+			for (const video of processingVideos) {
 				try {
 					console.log(`🔄 Polling status for video ${video.id} (Job: ${video.jobId})`);
 					const response = await fetch(`/api/runpod/${video.jobId}`);
-					const data = await response.json();
+
+					// Log raw response for debugging
+					const responseText = await response.text();
+					console.log(`Raw response for video ${video.id}:`, responseText);
+
+					// Try to parse JSON only if we have content
+					if (!responseText) {
+						console.error(`Empty response for video ${video.id}`);
+						continue;
+					}
+
+					let data;
+					try {
+						data = JSON.parse(responseText);
+					} catch (parseError) {
+						console.error(
+							`Failed to parse response for video ${video.id}:`,
+							parseError
+						);
+						continue;
+					}
 
 					console.log(`📥 RunPod response for ${video.id}:`, {
 						status: data.status,
@@ -58,28 +80,33 @@ export default function MyVideosPage() {
 
 					if (!response.ok) {
 						console.error(`❌ API error for video ${video.id}:`, data.error);
-						updateVideoStatus(video.id, "failed");
+						updateVideoStatus(video.jobId, "failed");
 						continue;
 					}
 
 					if (data.status === "COMPLETED") {
 						if (data.output?.result) {
 							console.log(`✅ Video ${video.id} completed. URL:`, data.output.result);
-							updateVideoStatus(video.id, "completed", data.output.result);
+							updateVideoStatus(video.jobId, "completed", data.output.result);
 						} else {
 							console.error(
 								`❌ No result URL in completed response for video ${video.id}`
 							);
-							updateVideoStatus(video.id, "failed");
+							updateVideoStatus(video.jobId, "failed");
 						}
 					} else if (data.status === "FAILED") {
 						console.error(`❌ Job failed for video ${video.id}`);
-						updateVideoStatus(video.id, "failed");
+						updateVideoStatus(video.jobId, "failed");
 					} else {
 						console.log(`⏳ Video ${video.id} status: ${data.status}`);
 					}
 				} catch (error) {
 					console.error(`💥 Error polling status for video ${video.id}:`, error);
+					console.error("Full error details:", {
+						name: error.name,
+						message: error.message,
+						stack: error.stack,
+					});
 				}
 			}
 		}, 20000);
@@ -92,23 +119,6 @@ export default function MyVideosPage() {
 
 		setIsGenerating(true);
 
-		const id = new Date().getTime().toString();
-		const currentSeed = isRandomSeed ? Math.floor(Math.random() * 1000000) : seed;
-
-		const newVideo: Video = {
-			id,
-			prompt,
-			frames: videoSettings.numFrames,
-			url: "",
-			seed: currentSeed,
-			status: "generating",
-			enhancePrompt: false,
-			jobId: "",
-			createdAt: new Date().toISOString(),
-		};
-
-		addVideo(newVideo);
-
 		try {
 			const response = await fetch("/api/runpod", {
 				method: "POST",
@@ -116,12 +126,15 @@ export default function MyVideosPage() {
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
+					prompt,
+					modelName: "mochi-1",
+					frames: videoSettings.numFrames,
 					input: {
 						positive_prompt: prompt,
 						negative_prompt: videoSettings.negativePrompt,
 						width: videoSettings.width,
 						height: videoSettings.height,
-						seed: currentSeed,
+						seed: isRandomSeed ? Math.floor(Math.random() * 1000000) : seed,
 						steps: videoSettings.steps,
 						cfg: videoSettings.cfg,
 						num_frames: videoSettings.numFrames,
@@ -129,31 +142,30 @@ export default function MyVideosPage() {
 				}),
 			});
 
-			const data = await response.json();
-
 			if (!response.ok) {
-				throw new Error(data.error || "Failed to generate video");
+				const error = await response.json();
+				throw new Error(error.error || "Failed to generate video");
 			}
 
-			updateVideoJobId(id, data.id);
-			updateVideoStatus(id, "generating");
+			const video = await response.json();
+			addVideo(video);
 		} catch (error) {
 			console.error("Error generating video:", error);
-			updateVideoStatus(id, "failed");
 		} finally {
 			setIsGenerating(false);
 		}
 	};
 
-	const applyVideoSettings = (video: { prompt: string; frames: number; seed: number }) => {
+	const applyVideoSettings = (video: { prompt: string; frames?: number; seed?: number }) => {
 		setPrompt(video.prompt);
+		if (video.seed) setSeed(video.seed);
 	};
 
 	// Transform videos to queue items
 	const queueItems = videos
-		.filter(video => video.status === "generating")
+		.filter(video => video.status === "queued" || video.status === "processing")
 		.map(video => ({
-			id: video.id,
+			id: video.id.toString(),
 			prompt: video.prompt,
 			status: "processing" as const,
 		}));

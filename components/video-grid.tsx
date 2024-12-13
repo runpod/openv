@@ -1,10 +1,8 @@
-import React from "react";
-
 import { cn } from "@/lib/utils";
 import { Video } from "@/types";
 
-import VideoCard from "./video-card";
-import VideoControls from "./video-controls";
+import { VideoCard } from "./video-card";
+import { VideoControls } from "./video-controls";
 
 export type SortOption = "newest" | "oldest" | "name_asc" | "name_desc";
 
@@ -14,13 +12,13 @@ interface VideoGridProps {
 	setGridView: (view: "2x2" | "3x3" | "list") => void;
 	searchQuery: string;
 	setSearchQuery: (query: string) => void;
-	onDelete: (id: string) => void;
-	onCopySettings: (video: { prompt: string; frames: number; seed: number }) => void;
-	sortOption: "newest" | "oldest" | "name_asc" | "name_desc";
-	setSortOption: (option: "newest" | "oldest" | "name_asc" | "name_desc") => void;
+	onDelete: (id: number) => void;
+	onCopySettings: (video: Video) => void;
+	sortOption: SortOption;
+	setSortOption: (option: SortOption) => void;
 }
 
-const VideoGrid: React.FC<VideoGridProps> = ({
+export function VideoGrid({
 	videos = [],
 	gridView,
 	setGridView,
@@ -30,7 +28,7 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 	onCopySettings,
 	sortOption,
 	setSortOption,
-}) => {
+}: VideoGridProps) {
 	const getGridClass = () => {
 		switch (gridView) {
 			case "2x2":
@@ -44,9 +42,10 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 		}
 	};
 
-	const filteredVideos = Array.isArray(videos)
-		? videos.filter(video => video.prompt.toLowerCase().includes(searchQuery.toLowerCase()))
-		: [];
+	const filteredVideos = videos.filter(video => {
+		if (!searchQuery) return true;
+		return (video.prompt || "").toLowerCase().includes(searchQuery.toLowerCase());
+	});
 
 	const sortedVideos = [...filteredVideos].sort((a, b) => {
 		switch (sortOption) {
@@ -55,9 +54,9 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 			case "oldest":
 				return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
 			case "name_asc":
-				return a.prompt.localeCompare(b.prompt);
+				return (a.prompt || "").localeCompare(b.prompt || "");
 			case "name_desc":
-				return b.prompt.localeCompare(a.prompt);
+				return (b.prompt || "").localeCompare(a.prompt || "");
 			default:
 				return 0;
 		}
@@ -78,7 +77,7 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 			</div>
 
 			<div className={cn("p-4", gridView === "list" && "px-2")}>
-				{!Array.isArray(videos) || videos.length === 0 ? (
+				{videos.length === 0 ? (
 					<p className="text-center text-muted-foreground py-8">No videos yet :(</p>
 				) : sortedVideos.length === 0 ? (
 					<p className="text-center text-muted-foreground py-8">
@@ -86,9 +85,11 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 					</p>
 				) : (
 					<div
-						className={`${getGridClass()} ${
-							gridView === "list" ? "space-y-1" : "gap-4"
-						} w-full`}
+						className={cn(
+							getGridClass(),
+							gridView === "list" ? "space-y-1" : "gap-4",
+							"w-full"
+						)}
 					>
 						{sortedVideos.map(video => (
 							<VideoCard
@@ -104,6 +105,6 @@ const VideoGrid: React.FC<VideoGridProps> = ({
 			</div>
 		</div>
 	);
-};
+}
 
 export default VideoGrid;

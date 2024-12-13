@@ -1,74 +1,82 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface CreateVideoParams {
-  prompt: string;
+	prompt: string;
+	modelName?: string;
+	duration?: number;
 }
 
-type RunPodStatus = 
-  | 'IN_QUEUE' 
-  | 'IN_PROGRESS' 
-  | 'COMPLETED' 
-  | 'FAILED' 
-  | 'CANCELLED' 
-  | 'TIMED_OUT';
+type VideoStatus = "queued" | "processing" | "completed" | "failed";
 
 interface VideoResponse {
-  id: string;
-  status: RunPodStatus;
+	id: number;
+	jobId: string;
+	userId: string;
+	prompt: string;
+	status: VideoStatus;
+	createdAt: string;
+	updatedAt: string;
+	modelName?: string;
+	duration?: number;
+	url?: string;
+	error?: string;
 }
 
-export function useVideoStatus(videoId: string | null) {
-  return useQuery<VideoResponse | null, Error>({
-    queryKey: ['video-status', videoId],
-    queryFn: async () => {
-      if (!videoId) return null;
-      console.log('Fetching status for:', videoId); // Debug log
-      const response = await fetch(`/api/runpod/${videoId}`);
-      const data = await response.json();
-      console.log('Status response:', data); // Debug log
-      return data;
-    },
-    enabled: !!videoId,
-    refetchInterval: (query) => {
-      const data = query.state.data as VideoResponse | null;
-      // Continue polling if data exists and status is not terminal
-      if (data && (data.status === 'IN_QUEUE' || data.status === 'IN_PROGRESS')) {
-        console.log('Continuing to poll...'); // Debug log
-        return 3000;
-      }
-      console.log('Stopping poll - terminal status reached'); // Debug log
-      return false;
-    },
-    retry: true,
-    retryDelay: 1000,
-    refetchIntervalInBackground: true,
-    staleTime: 0,
-    gcTime: 0,
-  });
+export function useVideoStatus(jobId: string | null) {
+	return useQuery<VideoResponse | null, Error>({
+		queryKey: ["video-status", jobId],
+		queryFn: async () => {
+			if (!jobId) return null;
+			console.log("Fetching status for:", jobId);
+			const response = await fetch(`/api/runpod/${jobId}`);
+			if (!response.ok) {
+				throw new Error("Failed to fetch video status");
+			}
+			const data = await response.json();
+			console.log("Status response:", data);
+			return data;
+		},
+		enabled: !!jobId,
+		refetchInterval: query => {
+			const data = query.state.data as VideoResponse | null;
+			if (data && (data.status === "queued" || data.status === "processing")) {
+				console.log("Continuing to poll...");
+				return 3000;
+			}
+			console.log("Stopping poll - terminal status reached");
+			return false;
+		},
+		retry: true,
+		retryDelay: 1000,
+		refetchIntervalInBackground: true,
+		staleTime: 0,
+		gcTime: 0,
+	});
 }
 
 export function useCreateVideo() {
-  const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({ prompt }: CreateVideoParams) => {
-      const response = await fetch("/api/videos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
+	return useMutation({
+		mutationFn: async ({ prompt, modelName, duration }: CreateVideoParams) => {
+			const response = await fetch("/api/runpod", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ prompt, modelName, duration }),
+			});
 
-      if (!response.ok) {
-        throw new Error("Failed to create video");
-      }
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || "Failed to create video");
+			}
 
-      const data = await response.json();
-      console.log('Created video with ID:', data.id); // Debug log
-      return data as VideoResponse;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["videos"] });
-      queryClient.invalidateQueries({ queryKey: ['video-status', data.id] });
-    },
-  });
-} 
+			const data = await response.json();
+			console.log("Created video with ID:", data.id);
+			return data as VideoResponse;
+		},
+		onSuccess: data => {
+			queryClient.invalidateQueries({ queryKey: ["videos"] });
+			queryClient.invalidateQueries({ queryKey: ["video-status", data.jobId] });
+		},
+	});
+}

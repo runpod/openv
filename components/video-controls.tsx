@@ -1,5 +1,4 @@
 import { Grid2X2, Grid3X3, List, Search, SortAsc } from "lucide-react";
-import React from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,25 +10,25 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-type SortOption = "newest" | "oldest" | "name_asc" | "name_desc";
+export type SortOption = "newest" | "oldest" | "name_asc" | "name_desc";
 
-type VideoControlsProps = {
+interface VideoControlsProps {
 	searchQuery: string;
 	setSearchQuery: (query: string) => void;
 	sortOption: SortOption;
 	setSortOption: (option: SortOption) => void;
 	gridView: "2x2" | "3x3" | "list";
 	setGridView: (view: "2x2" | "3x3" | "list") => void;
-};
+}
 
-const VideoControls: React.FC<VideoControlsProps> = ({
+export function VideoControls({
 	searchQuery,
 	setSearchQuery,
 	sortOption,
 	setSortOption,
 	gridView,
 	setGridView,
-}) => {
+}: VideoControlsProps) {
 	return (
 		<div className="flex items-center justify-end gap-2">
 			<div className="flex items-center gap-1">
@@ -93,6 +92,4 @@ const VideoControls: React.FC<VideoControlsProps> = ({
 			</div>
 		</div>
 	);
-};
-
-export default VideoControls;
+}

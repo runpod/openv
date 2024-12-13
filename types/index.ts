@@ -6,16 +6,21 @@ export interface QueueItem {
 }
 
 export interface Video {
-	id: string;
-	prompt: string;
-	frames: number;
-	url: string;
-	downloadUrl?: string;
-	seed: number;
-	status: "generating" | "completed" | "failed";
-	enhancePrompt: boolean;
+	id: number;
 	jobId: string;
+	userId: string;
+	prompt: string;
+	status: "queued" | "processing" | "completed" | "failed";
 	createdAt: string;
+	updatedAt: string;
+	modelName?: string;
+	duration?: number;
+	url?: string;
+	error?: string;
+	// UI-specific fields
+	frames?: number;
+	enhancePrompt?: boolean;
+	seed?: number;
 }
 
 export type HealthStatus = {
