@@ -11,7 +11,8 @@
     "prisma:migrate": "dotenv -e .env.local -- npx prisma migrate dev",
     "prisma:studio": "dotenv -e .env.local -- npx prisma studio",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.0.2",
