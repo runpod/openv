@@ -51,15 +51,67 @@ sequenceDiagram
 
 ### Process Description
 
-1. **Video Generation**
+1. **Video Generation Request**
 
     - User enters a prompt and requests video generation
-    - Frontend submits request to API
-    - API validates and stores the job
-    - RunPod processes the video asynchronously
-    - Frontend polls for status updates
+    - Frontend submits request to `/api/runpod` endpoint
+    - API validates the request and user authentication using Clerk
+    - Creates a new video record in the database with status "PENDING"
+    - Sends request to RunPod API with the prompt and configuration
+    - Returns job ID and status to frontend
 
-2. **Video Management**
-    - Users can delete their videos
-    - System cleans up both database records and stored files
-    - All operations are authenticated and authorized
+2. **RunPod Processing**
+
+    - RunPod processes the video generation asynchronously
+    - Uses the Stable Video Diffusion model for generation
+    - Sends webhook updates to `/api/runpod/webhook` endpoint
+    - Webhook payload includes job status and output URLs
+
+3. **Status Updates**
+
+    - Webhook endpoint receives status updates from RunPod
+    - Updates video status in database (PENDING, PROCESSING, COMPLETED, FAILED)
+    - Frontend polls the API for current status
+    - Updates UI based on video status
+
+4. **Video Management**
+    - Users can view their generated videos
+    - Delete functionality removes both database records and stored files
+    - All operations are authenticated via Clerk
+    - Database maintains video metadata and relationships to users
+
+### Implementation Details
+
+1. **API Endpoints**
+
+    - `/api/runpod`: Handles video generation requests
+    - `/api/runpod/webhook`: Processes RunPod status updates
+    - `/api/videos`: Manages video metadata and user operations
+
+2. **Database Schema**
+
+    - Videos table tracks:
+        - Generation status
+        - User information
+        - Prompt data
+        - RunPod job ID
+        - Output URLs
+        - Creation and update timestamps
+
+3. **Authentication**
+
+    - Clerk handles user authentication
+    - API routes are protected via middleware
+    - User association maintained for all video operations
+
+4. **Error Handling**
+
+    - Failed generations are tracked in database
+    - Users notified of failures
+    - Automatic cleanup of incomplete or failed jobs
+
+5. **Testing**
+    - Jest test suite for API endpoints
+    - Integration tests for RunPod interaction
+    - Webhook handling verification
+    - Database operations validation
