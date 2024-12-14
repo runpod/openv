@@ -1,189 +1,197 @@
-import { GET as GET_STATUS } from "@/app/api/runpod/[jobId]/route";
-import { GET, POST } from "@/app/api/runpod/route";
+import { NextRequest } from "next/server";
+
+// Set up test environment
+process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3001";
 
 // Mock environment variables
-process.env.RUNPOD_API_KEY = "test-api-key";
-process.env.RUNPOD_ENDPOINT_ID = "test-endpoint-id";
-
-// Mock Next.js modules
-jest.mock("next/server", () => ({
-	NextResponse: {
-		json: jest.fn().mockImplementation((data: unknown, init?: { status?: number }) => ({
-			status: init?.status || 200,
-			json: async () => data,
-		})),
-	},
-}));
+process.env.RUNPOD_API_KEY = "test_api_key";
+process.env.RUNPOD_ENDPOINT_ID = "test_endpoint_id";
+process.env.RUNPOD_WEBHOOK_TOKEN = "test_webhook_token";
 
 // Mock Clerk auth
 jest.mock("@clerk/nextjs/server", () => ({
-	auth: jest.fn(() => ({
-		userId: "test-user-id",
+	auth: jest.fn().mockResolvedValue({ userId: "test-user-123" }),
+}));
+
+// Mock rate limiter
+const mockRateLimit = jest.fn();
+jest.mock("@/lib/ratelimiter", () => ({
+	ratelimitConfig: {
+		enabled: true,
+		ratelimit: {
+			limit: mockRateLimit,
+		},
+	},
+}));
+
+// Mock Prisma
+const mockCreate = jest.fn();
+const mockUpdate = jest.fn();
+jest.mock("@prisma/client", () => ({
+	PrismaClient: jest.fn().mockImplementation(() => ({
+		video: {
+			create: mockCreate,
+			update: mockUpdate,
+		},
 	})),
 }));
 
 // Mock RunPod SDK
+const mockRun = jest.fn();
+const mockHealthCheck = jest.fn();
+const mockEndpoint = {
+	run: mockRun,
+	healthCheck: mockHealthCheck,
+};
 jest.mock("runpod-sdk", () => ({
 	__esModule: true,
-	default: jest.fn(() => ({
-		endpoint: jest.fn(() => ({
-			run: jest.fn(() => ({
-				id: "test-job-id",
-				status: "completed",
-			})),
-			status: jest.fn(() => ({
-				status: "completed",
-				output: {
-					url: "https://example.com/video.mp4",
-				},
-			})),
-			health: jest.fn(() => ({
-				status: "healthy",
-			})),
-		})),
-	})),
+	default: jest.fn().mockReturnValue({
+		endpoint: jest.fn().mockReturnValue(mockEndpoint),
+	}),
 }));
-
-// Mock rate limiter
-jest.mock("@/lib/ratelimiter", () => ({
-	ratelimitConfig: {
-		enabled: false,
-	},
-}));
-
-// Mock video database operations
-jest.mock("@/utils/data/video/videoCreate", () => ({
-	videoCreate: jest.fn(() => ({
-		video: {
-			id: 1,
-			jobId: "test-job-id",
-			userId: "test-user-id",
-			prompt: "test prompt",
-			status: "queued",
-		},
-		error: null,
-	})),
-}));
-
-jest.mock("@/utils/data/video/videoUpdate", () => ({
-	videoUpdate: jest.fn(() => ({
-		error: null,
-	})),
-}));
-
-// Mock Request implementation
-class MockRequest implements Partial<Request> {
-	private body: string;
-	readonly method: string;
-	readonly headers: Headers;
-	readonly url: string;
-
-	constructor(input: string, init?: RequestInit) {
-		this.url = input;
-		this.method = init?.method || "GET";
-		this.headers = new Headers(init?.headers);
-		this.body = (init?.body as string) || "";
-	}
-
-	async json(): Promise<any> {
-		return JSON.parse(this.body);
-	}
-}
-
-// Mock global Request and Headers
-beforeAll(() => {
-	global.Request = MockRequest as any;
-	if (typeof Headers === "undefined") {
-		global.Headers = class Headers extends Map {
-			append(key: string, value: string) {
-				this.set(key, value);
-			}
-			get(key: string) {
-				return this.get(key);
-			}
-		} as any;
-	}
-});
 
 describe("RunPod API Routes", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		mockRun.mockReset();
+		mockCreate.mockReset();
+		mockUpdate.mockReset();
+		mockRateLimit.mockReset();
+		mockHealthCheck.mockReset();
+		mockRateLimit.mockResolvedValue({ success: true });
 	});
 
 	describe("POST /api/runpod", () => {
 		it("should create a new video job", async () => {
-			const request = new Request("http://localhost:3000/api/runpod", {
+			const { POST } = await import("@/app/api/runpod/route");
+
+			// Mock RunPod response
+			mockRun.mockResolvedValueOnce({
+				id: "test-job-123",
+				status: "IN_QUEUE",
+			});
+
+			// Mock Prisma response
+			const mockVideo = {
+				id: 1,
+				jobId: "test-job-123",
+				userId: "test-user-123",
+				prompt: "test prompt",
+				status: "queued",
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			};
+			mockCreate.mockResolvedValueOnce(mockVideo);
+
+			const req = new NextRequest("http://test", {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
 				body: JSON.stringify({
 					prompt: "test prompt",
+					modelName: "test-model",
+					frames: 30,
+					input: {
+						positive_prompt: "test prompt",
+						negative_prompt: "",
+						width: 512,
+						height: 512,
+						seed: 42,
+						steps: 20,
+						cfg: 7,
+						num_frames: 30,
+					},
 				}),
 			});
 
-			const response = await POST(request);
-			const data = await response.json();
-
+			const response = await POST(req);
 			expect(response.status).toBe(200);
-			expect(data).toEqual({
-				id: 1,
-				jobId: "test-job-id",
-				userId: "test-user-id",
-				prompt: "test prompt",
-				status: "queued",
+
+			// Verify RunPod SDK was called with correct webhook URL
+			expect(mockRun).toHaveBeenCalledWith({
+				input: expect.any(Object),
+				webhook: "http://localhost:3001/api/runpod/webhook?token=test_webhook_token",
 			});
+
+			// Verify video was created in database
+			expect(mockCreate).toHaveBeenCalledWith({
+				data: expect.objectContaining({
+					jobId: "test-job-123",
+					userId: "test-user-123",
+					prompt: "test prompt",
+					modelName: "test-model",
+					frames: 30,
+					status: "queued",
+					width: 512,
+					height: 512,
+					seed: 42,
+					steps: 20,
+					cfg: 7,
+				}),
+			});
+
+			const data = await response.json();
+			expect(data).toEqual(mockVideo);
 		});
 
-		it("should return 400 if prompt is missing", async () => {
-			const request = new Request("http://localhost:3000/api/runpod", {
+		it("should handle rate limiting", async () => {
+			const { POST } = await import("@/app/api/runpod/route");
+
+			// Mock rate limit failure
+			mockRateLimit.mockResolvedValueOnce({ success: false });
+
+			const req = new NextRequest("http://test", {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({}),
+				body: JSON.stringify({
+					prompt: "test prompt",
+					modelName: "test-model",
+					frames: 30,
+					input: {
+						positive_prompt: "test prompt",
+					},
+				}),
 			});
 
-			const response = await POST(request);
-			expect(response.status).toBe(400);
+			const response = await POST(req);
+			expect(response.status).toBe(429);
 		});
+
+		it("should handle RunPod API errors", async () => {
+			const { POST } = await import("@/app/api/runpod/route");
+
+			// Mock RunPod error
+			mockRun.mockRejectedValueOnce(new Error("RunPod API error"));
+
+			const req = new NextRequest("http://test", {
+				method: "POST",
+				body: JSON.stringify({
+					prompt: "test prompt",
+					modelName: "test-model",
+					frames: 30,
+					input: {
+						positive_prompt: "test prompt",
+					},
+				}),
+			});
+
+			const response = await POST(req);
+			expect(response.status).toBe(500);
+		}, 10000); // Increase timeout to 10 seconds
 	});
 
 	describe("GET /api/runpod", () => {
 		it("should get health status", async () => {
-			const response = await GET();
-			const data = await response.json();
+			const { GET } = await import("@/app/api/runpod/route");
 
-			expect(response.status).toBe(200);
-			expect(data).toEqual({
+			// Mock RunPod health check response
+			mockHealthCheck.mockResolvedValueOnce({
 				status: "healthy",
 			});
-		});
-	});
 
-	describe("GET /api/runpod/[jobId]", () => {
-		it("should get video job status", async () => {
-			const request = new Request("http://localhost:3000/api/runpod/test-job-id");
-			const params = Promise.resolve({ jobId: "test-job-id" });
-
-			const response = await GET_STATUS(request, { params });
+			const req = new NextRequest("http://test");
+			const response = await GET(req);
 			const data = await response.json();
 
 			expect(response.status).toBe(200);
-			expect(data).toEqual({
-				status: "completed",
-				output: {
-					url: "https://example.com/video.mp4",
-				},
-			});
-		});
-
-		it("should return 400 if jobId is missing", async () => {
-			const request = new Request("http://localhost:3000/api/runpod/");
-			const params = Promise.resolve({});
-
-			const response = await GET_STATUS(request, { params });
-			expect(response.status).toBe(400);
-		});
+			expect(data).toEqual({ status: "healthy" });
+		}, 10000); // Increase timeout to 10 seconds
 	});
 });

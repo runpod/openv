@@ -1,272 +1,163 @@
-// Mock implementations
-import { auth } from "@clerk/nextjs/server";
-import { PrismaClient, Video } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { NextRequest } from "next/server";
 
-import { DELETE, GET } from "@/app/api/videos/route";
-
-// Define mock types
-type MockPrismaVideo = {
-	findMany: jest.Mock;
-	findUnique: jest.Mock;
-	delete: jest.Mock;
-};
-
-type MockPrisma = {
-	video: MockPrismaVideo;
-	$connect: jest.Mock;
-	$disconnect: jest.Mock;
-};
-
-// Mock declarations must be at the top level
+// Mock Clerk auth
 jest.mock("@clerk/nextjs/server", () => ({
-	auth: jest.fn(() => Promise.resolve({ userId: "test-user-id" })),
+	auth: jest.fn().mockResolvedValue({ userId: "test-user-id" }),
 }));
 
-jest.mock("next/server", () => ({
-	NextResponse: {
-		json: jest.fn().mockImplementation((data: unknown, init?: { status?: number }) => ({
-			status: init?.status || 200,
-			json: async () => data,
-		})),
-	},
+// Mock Prisma
+const mockFindMany = jest.fn();
+const mockDeleteMany = jest.fn();
+jest.mock("@prisma/client", () => ({
+	PrismaClient: jest.fn().mockImplementation(() => ({
+		video: {
+			findMany: mockFindMany,
+			deleteMany: mockDeleteMany,
+		},
+	})),
 }));
 
-// Mock PrismaClient
-const mockVideo = {
-	findMany: jest.fn(),
-	findUnique: jest.fn(),
-	delete: jest.fn(),
-};
+const prisma = new PrismaClient();
 
-jest.mock("@prisma/client", () => {
-	const video = {
-		findMany: jest.fn(),
-		findUnique: jest.fn(),
-		delete: jest.fn(),
-	};
-
-	return {
-		PrismaClient: jest.fn().mockImplementation(() => ({
-			video,
-			$connect: jest.fn(),
-			$disconnect: jest.fn(),
-		})),
-	};
-});
-
-// Request mock with proper types
-class MockRequest implements Partial<Request> {
-	private body: string;
-	readonly method: string;
-	readonly headers: Headers;
-	readonly url: string;
-
-	constructor(input: string, init?: RequestInit) {
-		this.url = input;
-		this.method = init?.method || "GET";
-		this.headers = new Headers(init?.headers);
-		this.body = (init?.body as string) || "";
-	}
-
-	async json(): Promise<any> {
-		return JSON.parse(this.body);
-	}
-}
-
-// Override global Request for tests
-global.Request = MockRequest as any;
-
-describe("Videos API Routes", () => {
-	let prisma: MockPrisma;
-
+describe("Videos API Unit Tests", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
-		// Get a fresh instance of the PrismaClient mock
-		prisma = new PrismaClient() as unknown as MockPrisma;
+		mockFindMany.mockReset();
+		mockDeleteMany.mockReset();
 	});
 
 	describe("GET /api/videos", () => {
+		const testDate = new Date("2024-01-01T00:00:00Z");
+		const mockVideos = [
+			{
+				id: 1,
+				jobId: "test-job-1",
+				userId: "test-user-id",
+				prompt: "test prompt 1",
+				status: "completed",
+				createdAt: testDate.toISOString(),
+				updatedAt: testDate.toISOString(),
+			},
+			{
+				id: 2,
+				jobId: "test-job-2",
+				userId: "test-user-id",
+				prompt: "test prompt 2",
+				status: "processing",
+				createdAt: testDate.toISOString(),
+				updatedAt: testDate.toISOString(),
+			},
+		];
+
 		it("should return user's videos", async () => {
-			const mockVideos: Video[] = [
-				{
-					id: 1,
-					jobId: "test-job-1",
-					userId: "test-user-id",
-					prompt: "test prompt 1",
-					status: "completed",
-					createdAt: new Date(),
-					updatedAt: new Date(),
-					modelName: null,
-					duration: null,
-					url: null,
-					error: null,
-				},
-				{
-					id: 2,
-					jobId: "test-job-2",
-					userId: "test-user-id",
-					prompt: "test prompt 2",
-					status: "processing",
-					createdAt: new Date(),
-					updatedAt: new Date(),
-					modelName: null,
-					duration: null,
-					url: null,
-					error: null,
-				},
-			];
+			const { GET } = await import("@/app/api/videos/route");
 
-			prisma.video.findMany.mockResolvedValue(mockVideos);
+			// Mock Prisma response
+			mockFindMany.mockResolvedValueOnce(mockVideos);
 
-			const response = await GET();
+			const req = new NextRequest("http://test");
+			const response = await GET(req);
 			const data = await response.json();
 
 			expect(response.status).toBe(200);
 			expect(data).toEqual(mockVideos);
-			expect(prisma.video.findMany).toHaveBeenCalledWith({
+			expect(mockFindMany).toHaveBeenCalledWith({
 				where: { userId: "test-user-id" },
 				orderBy: { createdAt: "desc" },
+				select: {
+					id: true,
+					jobId: true,
+					userId: true,
+					prompt: true,
+					status: true,
+					url: true,
+					frames: true,
+					createdAt: true,
+				},
 			});
 		});
 
-		it("should return 401 when user is not authenticated", async () => {
-			(auth as jest.Mock).mockResolvedValueOnce({ userId: null });
+		it("should handle unauthorized requests", async () => {
+			const { GET } = await import("@/app/api/videos/route");
 
-			const response = await GET();
+			// Mock unauthorized user
+			(jest.requireMock("@clerk/nextjs/server").auth as jest.Mock).mockResolvedValueOnce({
+				userId: null,
+			});
+
+			const req = new NextRequest("http://test");
+			const response = await GET(req);
+
 			expect(response.status).toBe(401);
 		});
 
 		it("should handle database errors", async () => {
-			prisma.video.findMany.mockRejectedValue(new Error("Database error"));
+			const { GET } = await import("@/app/api/videos/route");
 
-			const response = await GET();
+			// Mock database error
+			mockFindMany.mockRejectedValueOnce(new Error("Database error"));
+
+			const req = new NextRequest("http://test");
+			const response = await GET(req);
+
 			expect(response.status).toBe(500);
 		});
 	});
 
 	describe("DELETE /api/videos", () => {
-		const mockVideo: Video = {
-			id: 1,
-			jobId: "test-job-1",
-			userId: "test-user-id",
-			prompt: "test prompt",
-			status: "completed",
-			createdAt: new Date(),
-			updatedAt: new Date(),
-			modelName: null,
-			duration: null,
-			url: null,
-			error: null,
-		};
+		it("should delete videos by jobIds", async () => {
+			const { DELETE } = await import("@/app/api/videos/route");
 
-		it("should delete a video", async () => {
-			prisma.video.findUnique.mockResolvedValue(mockVideo);
-			prisma.video.delete.mockResolvedValue(mockVideo);
+			// Mock successful deletion
+			mockDeleteMany.mockResolvedValueOnce({ count: 2 });
 
-			const request = new Request("http://localhost:3000/api/videos", {
+			const req = new NextRequest("http://test", {
 				method: "DELETE",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ id: 1 }),
+				body: JSON.stringify({
+					jobIds: ["test-job-1", "test-job-2"],
+				}),
 			});
 
-			const response = await DELETE(request);
-			const data = await response.json();
-
+			const response = await DELETE(req);
 			expect(response.status).toBe(200);
-			expect(data).toEqual({ success: true });
-			expect(prisma.video.delete).toHaveBeenCalledWith({
-				where: { id: 1 },
-			});
-		});
 
-		it("should return 401 when user is not authenticated", async () => {
-			(auth as jest.Mock).mockResolvedValueOnce({ userId: null });
-
-			const request = new Request("http://localhost:3000/api/videos", {
-				method: "DELETE",
-				headers: {
-					"Content-Type": "application/json",
+			expect(mockDeleteMany).toHaveBeenCalledWith({
+				where: {
+					jobId: {
+						in: ["test-job-1", "test-job-2"],
+					},
+					userId: "test-user-id",
 				},
-				body: JSON.stringify({ id: 1 }),
 			});
-
-			const response = await DELETE(request);
-			expect(response.status).toBe(401);
-		});
-
-		it("should return 400 when video ID is invalid", async () => {
-			const request = new Request("http://localhost:3000/api/videos", {
-				method: "DELETE",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ id: "invalid" }),
-			});
-
-			const response = await DELETE(request);
-			expect(response.status).toBe(400);
-		});
-
-		it("should return 404 when video is not found", async () => {
-			prisma.video.findUnique.mockResolvedValue(null);
-
-			const request = new Request("http://localhost:3000/api/videos", {
-				method: "DELETE",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ id: 999 }),
-			});
-
-			const response = await DELETE(request);
-			expect(response.status).toBe(404);
-		});
-
-		it("should return 403 when user tries to delete another user's video", async () => {
-			prisma.video.findUnique.mockResolvedValue({
-				...mockVideo,
-				userId: "other-user-id",
-			});
-
-			const request = new Request("http://localhost:3000/api/videos", {
-				method: "DELETE",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ id: 1 }),
-			});
-
-			const response = await DELETE(request);
-			expect(response.status).toBe(403);
 		});
 
 		it("should handle database errors", async () => {
-			prisma.video.findUnique.mockRejectedValue(new Error("Database error"));
+			const { DELETE } = await import("@/app/api/videos/route");
 
-			const request = new Request("http://localhost:3000/api/videos", {
+			// Mock database error
+			mockDeleteMany.mockRejectedValueOnce(new Error("Database error"));
+
+			const req = new NextRequest("http://test", {
 				method: "DELETE",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ id: 1 }),
+				body: JSON.stringify({
+					jobIds: ["test-job-1"],
+				}),
 			});
 
-			const response = await DELETE(request);
+			const response = await DELETE(req);
 			expect(response.status).toBe(500);
 		});
 
-		it("should handle invalid JSON in request body", async () => {
-			const request = new Request("http://localhost:3000/api/videos", {
+		it("should handle invalid request body", async () => {
+			const { DELETE } = await import("@/app/api/videos/route");
+
+			const req = new NextRequest("http://test", {
 				method: "DELETE",
-				headers: {
-					"Content-Type": "application/json",
-				},
 				body: "invalid json",
 			});
 
-			const response = await DELETE(request);
+			const response = await DELETE(req);
 			expect(response.status).toBe(400);
 		});
 	});

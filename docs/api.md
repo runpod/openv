@@ -31,6 +31,11 @@
         "steps": 40,
         "cfg": 6,
         "num_frames": 31
-    }
+    },
+    "webhook": "https://URL.TO.YOUR.WEBHOOK"
 }
 ```
+
+##### webhook
+
+It has the same result as when you use `/status`.

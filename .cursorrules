@@ -1,7 +1,7 @@
 # Coding conventions
 
 You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, Tailwind, Postgres
-from Supabase managed with Prisma and authentication with Clerk.
+from Supabase managed with Prisma, authentication with Clerk and writing tests with Jest.
 
 ## Code Style and Structure
 
@@ -63,6 +63,8 @@ from Supabase managed with Prisma and authentication with Clerk.
 - Use explicit relations with references
 - Keep the schema.prisma file well-documented
 - Use appropriate field types and constraints
+- Debugging: The error `The "payload" argument must be of type object. Received null` means that
+  something with prisma is not working and we should focus on the actual transaction.
 
 ## Authentication with Clerk
 
@@ -106,6 +108,11 @@ from Supabase managed with Prisma and authentication with Clerk.
 - Keep query logic separate from UI components
 - Avoid direct fetch calls when TanStack Query can be used
 - Handle loading and error states consistently across queries
+
+## Testing with Jest
+
+- Unit tests should mock everything that is not part of the unit test
+- Integration tests should mock nothing, but use the APIs directly
 
 ## Key Conventions
 

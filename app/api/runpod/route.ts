@@ -1,46 +1,55 @@
 import { auth } from "@clerk/nextjs/server";
+import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
-import runpodSdk from "runpod-sdk";
+import RunPod from "runpod-sdk";
 
 import { ratelimitConfig } from "@/lib/ratelimiter";
-import { videoCreate } from "@/utils/data/video/videoCreate";
 
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000; // 1 second
+const prisma = new PrismaClient();
 
-async function retryWithExponentialBackoff(
-	fn: () => Promise<any>,
-	retries = MAX_RETRIES,
-	delay = INITIAL_RETRY_DELAY
-) {
-	try {
-		return await fn();
-	} catch (error: any) {
-		if (retries === 0 || error?.status !== 429) throw error;
+// Initialize RunPod client
+const runpod = new RunPod(process.env.RUNPOD_API_KEY);
+const endpoint = runpod.endpoint(process.env.RUNPOD_ENDPOINT_ID);
 
-		await new Promise(resolve => setTimeout(resolve, delay));
-		return retryWithExponentialBackoff(fn, retries - 1, delay * 2);
+// Retry function with exponential backoff
+async function retryWithExponentialBackoff<T>(
+	fn: () => Promise<T>,
+	maxRetries = 3,
+	baseDelay = 1000
+): Promise<T> {
+	let lastError: Error | null = null;
+
+	for (let i = 0; i < maxRetries; i++) {
+		try {
+			return await fn();
+		} catch (error) {
+			lastError = error as Error;
+			const delay = baseDelay * Math.pow(2, i);
+			await new Promise(resolve => setTimeout(resolve, delay));
+		}
 	}
+
+	throw lastError;
 }
 
 export async function POST(request: Request) {
-	const { userId } = await auth();
-	const API_KEY = process.env.RUNPOD_API_KEY;
-	const ENDPOINT_ID = process.env.RUNPOD_ENDPOINT_ID;
-
-	if (!API_KEY || !ENDPOINT_ID) {
-		return NextResponse.json({ error: "RunPod configuration is missing" }, { status: 500 });
-	}
-
 	try {
-		// Rate limiting check
-		if (ratelimitConfig.enabled && ratelimitConfig.ratelimit) {
-			const { success } = await ratelimitConfig.ratelimit.limit(userId);
+		// Check rate limit
+		if (ratelimitConfig.enabled) {
+			const { success } = await ratelimitConfig.ratelimit.limit();
 			if (!success) {
-				return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+				return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 			}
 		}
 
+		// Get user ID from auth
+		const session = await auth();
+		const userId = session?.userId;
+		if (!userId) {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
+
+		// Parse request body
 		const body = await request.json();
 		const { prompt, modelName, frames, input } = body;
 
@@ -48,51 +57,56 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
 		}
 
-		const runpod = runpodSdk(API_KEY);
-		const endpoint = runpod.endpoint(ENDPOINT_ID);
-
-		if (!endpoint) {
-			return NextResponse.json(
-				{ error: "Failed to connect to RunPod endpoint" },
-				{ status: 500 }
-			);
+		// Validate webhook token
+		const webhookToken = process.env.RUNPOD_WEBHOOK_TOKEN;
+		if (!webhookToken) {
+			return NextResponse.json({ error: "Webhook token not configured" }, { status: 500 });
 		}
 
-		// Call RunPod with retry logic
-		const result = await retryWithExponentialBackoff(async () => {
-			return await endpoint.run({
-				input: {
-					positive_prompt: input.positive_prompt,
-					negative_prompt: input.negative_prompt || "",
-					width: input.width,
-					height: input.height,
-					seed: input.seed,
-					steps: input.steps,
-					cfg: input.cfg,
-					num_frames: input.num_frames,
-				},
+		// Create webhook URL
+		const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+		if (!appUrl) {
+			return NextResponse.json({ error: "App URL not configured" }, { status: 500 });
+		}
+
+		const webhookUrl = new URL("/api/runpod/webhook", appUrl);
+		webhookUrl.searchParams.set("token", webhookToken);
+
+		// Submit job to RunPod
+		const response = await retryWithExponentialBackoff(async () => {
+			const result = await endpoint.run({
+				input,
+				webhook: webhookUrl.toString(),
 			});
+
+			console.log("RunPod response:", result);
+
+			if (!result?.id) {
+				throw new Error("Invalid RunPod response: missing job ID");
+			}
+
+			return result;
 		});
 
-		// Store job in database
-		const { video, error: dbError } = await videoCreate({
-			jobId: result.id,
-			userId,
-			prompt,
-			modelName,
-			frames,
-			negativePrompt: input.negative_prompt,
-			width: input.width,
-			height: input.height,
-			seed: input.seed,
-			steps: input.steps,
-			cfg: input.cfg,
+		// Create video record
+		const video = await prisma.video.create({
+			data: {
+				jobId: response.id,
+				userId,
+				prompt,
+				modelName,
+				frames,
+				status: "queued",
+				...(input.negative_prompt && {
+					negativePrompt: input.negative_prompt,
+				}),
+				...(input.width && { width: input.width }),
+				...(input.height && { height: input.height }),
+				...(input.seed && { seed: input.seed }),
+				...(input.steps && { steps: input.steps }),
+				...(input.cfg && { cfg: input.cfg }),
+			},
 		});
-
-		if (dbError) {
-			console.error("Database error:", dbError);
-			return NextResponse.json({ error: "Failed to store video job" }, { status: 500 });
-		}
 
 		return NextResponse.json(video);
 	} catch (error: any) {
@@ -104,27 +118,19 @@ export async function POST(request: Request) {
 	}
 }
 
-export async function GET() {
-	const { userId } = await auth();
-	const API_KEY = process.env.RUNPOD_API_KEY;
-	const ENDPOINT_ID = process.env.RUNPOD_ENDPOINT_ID;
-
-	if (!API_KEY || !ENDPOINT_ID) {
-		return NextResponse.json({ error: "RunPod configuration is missing" }, { status: 500 });
-	}
-
+export async function GET(request: Request) {
 	try {
-		const runpod = runpodSdk(API_KEY);
-		const endpoint = runpod.endpoint(ENDPOINT_ID);
-
-		if (!endpoint) {
-			return NextResponse.json(
-				{ error: "Failed to connect to RunPod endpoint" },
-				{ status: 500 }
-			);
+		// Check if RunPod is configured
+		if (!process.env.RUNPOD_API_KEY || !process.env.RUNPOD_ENDPOINT_ID) {
+			return NextResponse.json({ error: "RunPod not configured" }, { status: 500 });
 		}
 
-		const health = await endpoint.health();
+		// Get health status
+		const health = await retryWithExponentialBackoff(async () => {
+			const result = await endpoint.healthCheck();
+			return { status: result?.status || "unhealthy" };
+		});
+
 		return NextResponse.json(health);
 	} catch (error: any) {
 		console.error("Error fetching RunPod health:", error);
