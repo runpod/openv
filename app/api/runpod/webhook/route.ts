@@ -1,9 +1,7 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
-const prisma = new PrismaClient({
-	log: ["error", "warn"],
-});
+import prisma from "@/lib/prisma";
 
 function verifyToken(request: Request): boolean {
 	try {

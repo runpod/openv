@@ -1,11 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
-import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import RunPod from "runpod-sdk";
 
+import prisma from "@/lib/prisma";
 import { ratelimitConfig } from "@/lib/ratelimiter";
-
-const prisma = new PrismaClient();
 
 // Initialize RunPod client
 const runpod = new RunPod(process.env.RUNPOD_API_KEY);
@@ -78,8 +76,6 @@ export async function POST(request: Request) {
 				input,
 				webhook: webhookUrl.toString(),
 			});
-
-			console.log("RunPod response:", result);
 
 			if (!result?.id) {
 				throw new Error("Invalid RunPod response: missing job ID");
