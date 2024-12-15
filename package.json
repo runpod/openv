@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo -p 3001",
-    "dev:test": "cross-env NODE_ENV=test dotenv -e .env.test -- next dev --turbo -p 3001",
+    "dev:test": "cross-env NODE_ENV=test next dev --turbo -p 3001",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "build": "yarn lint:fix && next build",
@@ -13,7 +13,7 @@
     "prisma:studio": "dotenv -e .env.local -- npx prisma studio",
     "test": "npm run test:unit",
     "test:unit": "dotenv -e .env.test -- jest --testPathIgnorePatterns=integration",
-    "test:integration": "dotenv -e .env.test -- npm run test:setup-db && cross-env NODE_OPTIONS='--experimental-vm-modules' dotenv -e .env.test -- jest -c jest.config.integration.js --testPathPattern=integration && dotenv -e .env.test -- npm run test:cleanup-db",
+    "test:integration": "dotenv -e .env.test -- npm run test:setup-db && cross-env NODE_ENV=test dotenv -e .env.test -- jest -c jest.config.integration.ts --testPathPattern=${PATTERN:-integration} && dotenv -e .env.test -- npm run test:cleanup-db",
     "test:watch": "dotenv -e .env.test -- jest --watch",
     "test:setup-db": "dotenv -e .env.test -- node scripts/setup-test-db.js setup",
     "test:cleanup-db": "dotenv -e .env.test -- node scripts/setup-test-db.js cleanup",
@@ -93,6 +93,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@clerk/testing": "^1.4.2",
     "@types/jest": "^29.5.14",
     "@types/node": "latest",
     "@types/node-fetch": "^2.6.12",

@@ -21,10 +21,10 @@ export default function MyVideosPage() {
 		isRandomSeed,
 		setIsRandomSeed,
 		addVideo,
-		updateVideoStatus,
 		getProcessingCount,
 		deleteVideo,
 		initialize,
+		fetchUpdatedVideos,
 	} = useVideosStore();
 
 	const [mounted, setMounted] = useState(false);
@@ -39,80 +39,17 @@ export default function MyVideosPage() {
 		initialize().then(() => setMounted(true));
 	}, [initialize]);
 
-	// Poll for video status updates
+	// Poll for video updates
 	useEffect(() => {
 		const interval = setInterval(async () => {
-			const processingVideos = videos.filter(
-				v => v.status === "queued" || v.status === "processing"
-			);
-
-			for (const video of processingVideos) {
-				try {
-					console.log(`🔄 Polling status for video ${video.id} (Job: ${video.jobId})`);
-					const response = await fetch(`/api/runpod/${video.jobId}`);
-
-					// Log raw response for debugging
-					const responseText = await response.text();
-					console.log(`Raw response for video ${video.id}:`, responseText);
-
-					// Try to parse JSON only if we have content
-					if (!responseText) {
-						console.error(`Empty response for video ${video.id}`);
-						continue;
-					}
-
-					let data;
-					try {
-						data = JSON.parse(responseText);
-					} catch (parseError) {
-						console.error(
-							`Failed to parse response for video ${video.id}:`,
-							parseError
-						);
-						continue;
-					}
-
-					console.log(`📥 RunPod response for ${video.id}:`, {
-						status: data.status,
-						output: data.output,
-						error: data.error,
-					});
-
-					if (!response.ok) {
-						console.error(`❌ API error for video ${video.id}:`, data.error);
-						updateVideoStatus(video.jobId, "failed");
-						continue;
-					}
-
-					if (data.status === "COMPLETED") {
-						if (data.output?.result) {
-							console.log(`✅ Video ${video.id} completed. URL:`, data.output.result);
-							updateVideoStatus(video.jobId, "completed", data.output.result);
-						} else {
-							console.error(
-								`❌ No result URL in completed response for video ${video.id}`
-							);
-							updateVideoStatus(video.jobId, "failed");
-						}
-					} else if (data.status === "FAILED") {
-						console.error(`❌ Job failed for video ${video.id}`);
-						updateVideoStatus(video.jobId, "failed");
-					} else {
-						console.log(`⏳ Video ${video.id} status: ${data.status}`);
-					}
-				} catch (error) {
-					console.error(`💥 Error polling status for video ${video.id}:`, error);
-					console.error("Full error details:", {
-						name: error.name,
-						message: error.message,
-						stack: error.stack,
-					});
-				}
+			const processingCount = getProcessingCount();
+			if (processingCount > 0) {
+				await fetchUpdatedVideos();
 			}
 		}, 20000);
 
 		return () => clearInterval(interval);
-	}, [videos, updateVideoStatus]);
+	}, [fetchUpdatedVideos, getProcessingCount]);
 
 	const handleGenerate = async () => {
 		if (!prompt) return;

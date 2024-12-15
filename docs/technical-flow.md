@@ -100,6 +100,38 @@ sequenceDiagram
     - API routes are protected via middleware
     - User association maintained for all video operations
 
+    #### Public Routes
+
+    By default, Clerk's middleware automatically makes certain routes public:
+
+    - Webhook endpoints (`/api/*/webhook`)
+    - Authentication endpoints
+    - Static files
+    - Well-known endpoints
+
+    This means our RunPod webhook endpoint (`/api/runpod/webhook`) is automatically public and
+    protected by its own token-based authentication, while other API routes like `/api/videos`
+    remain protected by Clerk.
+
+    ### Authentication Flow
+
+    1. **Auth Pattern**
+
+        - Centralized auth utility in `lib/auth.ts`
+        - Consistent error handling across all routes
+        - Test mode support for integration testing
+
+    2. **Protected Routes**
+
+        - Use `auth()` and `requireAuth()` pattern
+        - TypeScript ensures auth requirements are met
+        - Proper error status codes (401 for unauthorized)
+
+    3. **Test Mode**
+        - Special handling for integration tests
+        - Bypasses Clerk auth when `NEXT_PUBLIC_TEST_MODE=true`
+        - Uses test user ID for consistency
+
 4. **Error Handling**
 
     - Failed generations are tracked in database
@@ -108,3 +140,95 @@ sequenceDiagram
 5. **Testing**
     - Unit tests for API endpoints
     - Integration tests for some endpoints
+
+## Video Generation and Status Updates
+
+### Initial Video Creation
+
+1. User submits a prompt and settings through the UI
+2. Frontend sends a POST request to `/api/runpod` with the prompt and settings
+3. Backend creates a new video record in the database with status "queued"
+4. RunPod job is submitted with a webhook URL for status updates
+
+### Status Updates
+
+1. Frontend polls for updates in two ways:
+
+    - Initial page load: Fetches all videos using GET `/api/videos`
+    - Subsequent polls: Uses GET `/api/videos?updatedSince={timestamp}` to fetch only updated videos
+    - The `updatedSince` parameter is a Unix timestamp in milliseconds
+    - Only videos modified after this timestamp are returned
+    - This reduces data transfer and improves performance
+
+2. Backend webhook handling:
+
+    - RunPod sends status updates to `/api/runpod/webhook`
+    - Webhook updates video status in database
+    - Status can be: "queued", "processing", "completed", or "failed"
+    - When completed, the video URL is stored
+
+3. Frontend state management:
+    - Stores last update time after each successful fetch
+    - Merges updated videos with existing state
+    - Only polls when there are videos in processing state
+    - Polling interval: 20 seconds
+
+### Video Deletion
+
+1. User requests video deletion
+2. Frontend sends DELETE request to `/api/videos` with video IDs
+3. Backend removes videos from database
+4. Frontend updates local state to remove deleted videos
+
+## API Endpoints
+
+### GET /api/videos
+
+- Returns all videos for authenticated user
+- Optional `updatedSince` query parameter for incremental updates
+- Response includes:
+    ```typescript
+    {
+      id: number;
+      jobId: string;
+      userId: string;
+      prompt: string;
+      status: "queued" | "processing" | "completed" | "failed";
+      url?: string;
+      frames?: number;
+      createdAt: string;
+      updatedAt: string;
+    }[]
+    ```
+
+### POST /api/runpod
+
+- Creates new video generation job
+- Request body:
+    ```typescript
+    {
+      prompt: string;
+      modelName: string;
+      frames: number;
+      input: {
+        positive_prompt: string;
+        negative_prompt?: string;
+        width?: number;
+        height?: number;
+        seed?: number;
+        steps?: number;
+        cfg?: number;
+        num_frames: number;
+      }
+    }
+    ```
+
+### DELETE /api/videos
+
+- Deletes videos by job IDs
+- Request body:
+    ```typescript
+    {
+      jobIds: string[];
+    }
+    ```

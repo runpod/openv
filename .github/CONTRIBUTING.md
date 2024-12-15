@@ -77,6 +77,55 @@ With ngrok running, configure your webhooks:
     2. Add endpoint: `https://<your-ngrok-url>/api/auth/webhook`
     3. Select relevant events (e.g., user created, updated)
 
+### Local Development with RunPod Webhooks
+
+For local development with RunPod webhooks:
+
+1. Start ngrok and copy the URL:
+
+    ```bash
+    ngrok http 3001
+    ```
+
+2. Set the ngrok URL in your `.env.local`:
+
+    ```
+    NEXT_PUBLIC_APP_URL=https://your-ngrok-url
+    ```
+
+3. Start the development server:
+
+    ```bash
+    yarn dev
+    ```
+
+4. Access your app at `http://localhost:3001`
+    - The app remains accessible at localhost
+    - Only RunPod webhooks use the ngrok URL
+    - ngrok forwards webhook calls to your local environment
+
+### Authentication Patterns
+
+We use a consistent authentication pattern across all protected routes:
+
+1. Import auth utilities:
+
+    ```typescript
+    import { auth, requireAuth } from "@/lib/auth";
+    ```
+
+2. Use in API routes:
+
+    ```typescript
+    const authResult = await auth();
+    requireAuth(authResult);
+    const { userId } = authResult;
+    ```
+
+3. Error handling is consistent:
+    - 401 for unauthorized requests
+    - Proper error objects with status codes
+
 ### Database Management
 
 1. Run migrations:
@@ -140,7 +189,19 @@ Integration tests use a real test database and ngrok for webhook testing:
 2. Run integration tests:
 
     ```bash
-    # Recommended: Run everything with one command
+    # Run all integration tests
+    npm run test:integration
+
+    # Run specific test file(s)
+    PATTERN=videos npm run test:integration    # Runs videos.integration.test.ts
+    PATTERN=webhook npm run test:integration   # Runs webhook.integration.test.ts
+    ```
+
+    You can run the tests in two ways:
+
+    a) Using the automated setup script:
+
+    ```bash
     # This script handles the complete setup:
     # - Kills any existing ngrok/Next.js processes
     # - Starts ngrok
@@ -150,51 +211,32 @@ Integration tests use a real test database and ngrok for webhook testing:
     ./scripts/run-integration-tests.sh
     ```
 
-    > Note: If you already have ngrok and Next.js running (e.g., during development), you can just
-    > run the tests directly with `npm run test:integration`. This will only run the tests without
-    > starting/stopping services.
-
-### Manual Integration Test Setup
-
-For debugging or development, you can run the integration tests manually:
-
-1. Start ngrok:
+    b) Manual setup (recommended during development):
 
     ```bash
+    # 1. Start ngrok in one terminal
     ngrok http 3001
-    ```
 
-    > [!NOTE] The tests will automatically get your ngrok URL from ngrok's API at
-    > `http://localhost:4040/api/tunnels`
-
-2. Start Next.js:
-
-    ```bash
+    # 2. Start Next.js in another terminal
     yarn dev
-    ```
 
-3. Run the tests:
-
-    ```bash
+    # 3. Run the tests in a third terminal
+    # Run all tests
     npm run test:integration
+
+    # Or run specific tests
+    PATTERN=videos npm run test:integration
     ```
 
-4. Watch the test output:
-    - You should see "Using ngrok URL: https://xxxx-xx-xx-xxx-xx.ngrok-free.app"
-    - The test will create a video job
-    - It will wait for the webhook callback (up to 2 minutes)
-    - You can monitor the job status in the logs
-
-The integration tests will:
-
-- Set up a clean test database
-- Run tests that interact with real services
-- Clean up the test database when done
+    > [!NOTE] When running tests manually, the tests will automatically get your ngrok URL from
+    > ngrok's API at `http://localhost:4040/api/tunnels`
 
 ### Test Files Organization
 
 - `__tests__/api/**/**.test.ts` - Unit tests for API routes
 - `__tests__/integration/**/**.integration.test.ts` - Integration tests
+    - `webhook.integration.test.ts` - Tests RunPod webhook functionality
+    - `videos.integration.test.ts` - Tests video API endpoints and updates
 - `jest.setup.ts` - Unit test setup and mocks
 - `jest.setup.integration.ts` - Integration test setup
 

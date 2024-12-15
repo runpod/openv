@@ -13,6 +13,7 @@ interface VideosState {
 	isRandomSeed: boolean;
 	seed: number;
 	videoSettings: VideoSettings;
+	lastUpdateTime: number | null;
 	setVideos: (videos: Video[]) => void;
 	setIsGenerating: (isGenerating: boolean) => void;
 	setPrompt: (prompt: string) => void;
@@ -32,6 +33,7 @@ interface VideosState {
 	deleteVideo: (id: number) => Promise<void>;
 	setVideoSettings: (settings: VideoSettings) => void;
 	fetchVideos: () => Promise<void>;
+	fetchUpdatedVideos: () => Promise<void>;
 	initialize: () => Promise<void>;
 }
 
@@ -57,6 +59,7 @@ export const useVideosStore = create<VideosState>()(
 			isRandomSeed: true,
 			seed: Math.floor(Math.random() * 1000000),
 			videoSettings: defaultSettings,
+			lastUpdateTime: null,
 
 			setVideos: videos => set({ videos }),
 			setIsGenerating: isGenerating => set({ isGenerating }),
@@ -134,9 +137,49 @@ export const useVideosStore = create<VideosState>()(
 						throw new Error("Failed to fetch videos");
 					}
 					const videos = await response.json();
-					set({ videos });
+					set({ videos, lastUpdateTime: Date.now() });
 				} catch (error) {
 					console.error("Error fetching videos:", error);
+				}
+			},
+
+			fetchUpdatedVideos: async () => {
+				const state = get();
+				if (!state.lastUpdateTime) {
+					return await state.fetchVideos();
+				}
+
+				try {
+					const timestamp = Number(state.lastUpdateTime);
+					if (isNaN(timestamp)) {
+						console.error("Invalid lastUpdateTime:", state.lastUpdateTime);
+						return await state.fetchVideos();
+					}
+
+					const response = await fetch(`/api/videos?updatedSince=${timestamp}`);
+
+					if (!response.ok) {
+						if (response.status === 400) {
+							console.warn("Invalid timestamp parameter, fetching all videos");
+							return await state.fetchVideos();
+						}
+						throw new Error(`Failed to fetch updated videos: ${response.statusText}`);
+					}
+
+					const updatedVideos = await response.json();
+
+					set(state => {
+						const videoMap = new Map(state.videos.map(v => [v.jobId, v]));
+						updatedVideos.forEach((video: Video) => {
+							videoMap.set(video.jobId, video);
+						});
+						return {
+							videos: Array.from(videoMap.values()),
+							lastUpdateTime: Date.now(),
+						};
+					});
+				} catch (error) {
+					console.error("Error fetching updated videos:", error);
 				}
 			},
 

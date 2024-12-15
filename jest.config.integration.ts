@@ -1,5 +1,6 @@
-/** @type {import('jest').Config} */
-const config = {
+import type { Config } from "jest";
+
+const config: Config = {
 	preset: "ts-jest",
 	testEnvironment: "node",
 	moduleNameMapper: {
@@ -15,7 +16,10 @@ const config = {
 	},
 	transformIgnorePatterns: ["node_modules/(?!(runpod-sdk)/)"],
 	setupFiles: ["<rootDir>/jest.setup.integration.ts"],
-	testMatch: ["**/__tests__/integration/**/*.test.ts"],
+	testMatch: ["**/__tests__/integration/**/*.integration.test.ts"],
+	extensionsToTreatAsEsm: [".ts"],
+	moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+	testTimeout: 30000,
 };
 
-module.exports = config;
+export default config;

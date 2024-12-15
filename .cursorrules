@@ -72,12 +72,17 @@ from Supabase managed with Prisma, authentication with Clerk and writing tests w
 
     ```typescript
     import { clerkMiddleware } from "@clerk/nextjs/server";
+    import { NextResponse } from "next/server";
 
-    export default clerkMiddleware();
+    export default process.env.NEXT_PUBLIC_TEST_MODE === "true"
+    	? () => NextResponse.next()
+    	: clerkMiddleware();
 
     export const config = {
     	matcher: [
-    		"/((?!_next|[^?]*\\.(jpg|jpeg|gif|png|svg|ico|css|js|woff2?|map)$).*)",
+    		// Skip Next.js internals and all static files
+    		"/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    		// Always run for API routes
     		"/api/:path*",
     	],
     };

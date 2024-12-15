@@ -1,7 +1,7 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import RunPod from "runpod-sdk";
 
+import { auth, requireAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { ratelimitConfig } from "@/lib/ratelimiter";
 
@@ -41,11 +41,9 @@ export async function POST(request: Request) {
 		}
 
 		// Get user ID from auth
-		const session = await auth();
-		const userId = session?.userId;
-		if (!userId) {
-			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-		}
+		const authResult = await auth();
+		requireAuth(authResult);
+		const { userId } = authResult;
 
 		// Parse request body
 		const body = await request.json();
@@ -106,6 +104,9 @@ export async function POST(request: Request) {
 
 		return NextResponse.json(video);
 	} catch (error: any) {
+		if (error.message === "Unauthorized") {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
 		console.error("Error submitting RunPod job:", error);
 		return NextResponse.json(
 			{ error: error?.message || "Failed to submit RunPod job" },
