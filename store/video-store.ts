@@ -13,7 +13,7 @@ interface VideosState {
 	isRandomSeed: boolean;
 	seed: number;
 	videoSettings: VideoSettings;
-	lastUpdateTime: number | null;
+	currentTimestamp: string | null;
 	setVideos: (videos: Video[]) => void;
 	setIsGenerating: (isGenerating: boolean) => void;
 	setPrompt: (prompt: string) => void;
@@ -59,7 +59,7 @@ export const useVideosStore = create<VideosState>()(
 			isRandomSeed: true,
 			seed: Math.floor(Math.random() * 1000000),
 			videoSettings: defaultSettings,
-			lastUpdateTime: null,
+			currentTimestamp: null,
 
 			setVideos: videos => set({ videos }),
 			setIsGenerating: isGenerating => set({ isGenerating }),
@@ -71,18 +71,37 @@ export const useVideosStore = create<VideosState>()(
 			setSeed: seed => set({ seed }),
 
 			updateVideoStatus: (jobId, status, url, error) =>
-				set(state => ({
-					videos: state.videos.map(v =>
+				set(state => {
+					const updatedVideos = state.videos.map(v =>
 						v.jobId === jobId
 							? {
 									...v,
 									status,
 									...(url ? { url } : {}),
 									...(error ? { error } : {}),
+									updatedAt: new Date().toISOString(),
 								}
 							: v
-					),
-				})),
+					);
+
+					const newestVideo = updatedVideos.reduce(
+						(newest, current) => {
+							return !newest ||
+								(current.updatedAt && current.updatedAt > newest.updatedAt)
+								? current
+								: newest;
+						},
+						null as Video | null
+					);
+
+					return {
+						videos: updatedVideos,
+						...(newestVideo &&
+						(!state.currentTimestamp || newestVideo.updatedAt > state.currentTimestamp)
+							? { currentTimestamp: newestVideo.updatedAt }
+							: {}),
+					};
+				}),
 
 			addVideo: video =>
 				set(state => ({
@@ -137,7 +156,18 @@ export const useVideosStore = create<VideosState>()(
 						throw new Error("Failed to fetch videos");
 					}
 					const videos = await response.json();
-					set({ videos, lastUpdateTime: Date.now() });
+
+					const newestVideo = videos.reduce((newest: Video | null, current: Video) => {
+						return !newest ||
+							(current.updatedAt && current.updatedAt > newest.updatedAt)
+							? current
+							: newest;
+					}, null);
+
+					set({
+						videos,
+						currentTimestamp: newestVideo?.updatedAt || null,
+					});
 				} catch (error) {
 					console.error("Error fetching videos:", error);
 				}
@@ -145,18 +175,14 @@ export const useVideosStore = create<VideosState>()(
 
 			fetchUpdatedVideos: async () => {
 				const state = get();
-				if (!state.lastUpdateTime) {
+				if (!state.currentTimestamp) {
 					return await state.fetchVideos();
 				}
 
 				try {
-					const timestamp = Number(state.lastUpdateTime);
-					if (isNaN(timestamp)) {
-						console.error("Invalid lastUpdateTime:", state.lastUpdateTime);
-						return await state.fetchVideos();
-					}
-
-					const response = await fetch(`/api/videos?updatedSince=${timestamp}`);
+					const response = await fetch(
+						`/api/videos?updatedSince=${state.currentTimestamp}`
+					);
 
 					if (!response.ok) {
 						if (response.status === 400) {
@@ -170,12 +196,18 @@ export const useVideosStore = create<VideosState>()(
 
 					set(state => {
 						const videoMap = new Map(state.videos.map(v => [v.jobId, v]));
+						let newestTimestamp = state.currentTimestamp;
+
 						updatedVideos.forEach((video: Video) => {
 							videoMap.set(video.jobId, video);
+							if (video.updatedAt && video.updatedAt > newestTimestamp!) {
+								newestTimestamp = video.updatedAt;
+							}
 						});
+
 						return {
 							videos: Array.from(videoMap.values()),
-							lastUpdateTime: Date.now(),
+							currentTimestamp: newestTimestamp,
 						};
 					});
 				} catch (error) {

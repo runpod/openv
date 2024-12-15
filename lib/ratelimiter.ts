@@ -1,37 +1,31 @@
-import { Ratelimit } from "@upstash/ratelimit"; // for deno: see above
+import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
 type RateLimitConfig = {
-  enabled: boolean;
-  ratelimit: Ratelimit | null;
+	enabled: boolean;
+	ratelimit: Ratelimit | null;
 };
 
-let ratelimitConfig: RateLimitConfig = {
-  enabled: false,
-  ratelimit: null,
+// Rate limiting is disabled by default
+const ratelimitConfig: RateLimitConfig = {
+	enabled: false,
+	ratelimit: null,
 };
 
-if (process.env.UPSTASH_REDIS_REST_URL) {
-  const redis = Redis.fromEnv();
+// Only enable if Redis URL is configured and we explicitly want rate limiting
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.ENABLE_RATE_LIMIT === "true") {
+	const redis = Redis.fromEnv();
 
-  // Create a new ratelimiter, that allows 5 requests per 10 seconds
-  const ratelimitFunction = new Ratelimit({
-    redis: redis,
-    limiter: Ratelimit.slidingWindow(5, "10 s"),
-    analytics: true,
-    enableProtection: true,
-  });
+	// Create a new ratelimiter, that allows 5 requests per 10 seconds
+	const ratelimitFunction = new Ratelimit({
+		redis: redis,
+		limiter: Ratelimit.slidingWindow(5, "10 s"),
+		analytics: true,
+		enableProtection: true,
+	});
 
-  ratelimitConfig = {
-    enabled: true,
-    ratelimit: ratelimitFunction,
-  };
-} else {
-  console.error("Environment variable UPSTASH_REDIS_REST_URL is not set.");
-  ratelimitConfig = {
-    enabled: false,
-    ratelimit: null,
-  };
+	ratelimitConfig.enabled = true;
+	ratelimitConfig.ratelimit = ratelimitFunction;
 }
 
 export { ratelimitConfig };

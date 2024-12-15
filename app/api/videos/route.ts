@@ -15,15 +15,21 @@ export async function GET(request: Request) {
 		let updatedSinceDate: Date | undefined;
 
 		if (updatedSince) {
-			// Validate the timestamp
-			const timestamp = parseInt(updatedSince);
-			if (isNaN(timestamp)) {
+			try {
+				updatedSinceDate = new Date(updatedSince);
+				// Check if the date is valid
+				if (isNaN(updatedSinceDate.getTime())) {
+					return NextResponse.json(
+						{ error: "Invalid updatedSince parameter" },
+						{ status: 400 }
+					);
+				}
+			} catch (error) {
 				return NextResponse.json(
 					{ error: "Invalid updatedSince parameter" },
 					{ status: 400 }
 				);
 			}
-			updatedSinceDate = new Date(timestamp);
 		}
 
 		const videos = await prisma.video.findMany({
