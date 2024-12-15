@@ -232,3 +232,34 @@ sequenceDiagram
       jobIds: string[];
     }
     ```
+
+## Troubleshooting
+
+### Database Connection Issues
+
+1. **Stored Procedures Error with Supabase**
+
+    If you encounter errors related to stored procedures or prepared statements when using Prisma
+    with Supabase, it's likely because the database URL is missing the required PgBouncer
+    parameters.
+
+    Solution: Add the following parameters to your `DATABASE_URL`:
+
+    ```
+    ?pgbouncer=true&connection_limit=1
+    ```
+
+    Example:
+
+    ```
+    DATABASE_URL="postgresql://user:password@host:6543/postgres?pgbouncer=true&connection_limit=1"
+    ```
+
+    This is required because:
+
+    - `pgbouncer=true` disables Prisma from generating prepared statements (required for PgBouncer
+      in transaction mode)
+    - `connection_limit=1` is needed for serverless environments
+
+    Note: Make sure to use port 6543 for the pooled connection (DATABASE_URL) and port 5432 for the
+    direct connection (DIRECT_URL).
