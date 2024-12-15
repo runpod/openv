@@ -55,7 +55,6 @@ sequenceDiagram
 
     - User enters a prompt and requests video generation
     - Frontend submits request to `/api/runpod` endpoint
-    - API validates the request and user authentication using Clerk
     - Creates a new video record in the database with status "PENDING"
     - Sends request to RunPod API with the prompt and configuration
     - Returns job ID and status to frontend
@@ -63,7 +62,6 @@ sequenceDiagram
 2. **RunPod Processing**
 
     - RunPod processes the video generation asynchronously
-    - Uses the Stable Video Diffusion model for generation
     - Sends webhook updates to `/api/runpod/webhook` endpoint
     - Webhook payload includes job status and output URLs
 
@@ -77,8 +75,6 @@ sequenceDiagram
 4. **Video Management**
     - Users can view their generated videos
     - Delete functionality removes both database records and stored files
-    - All operations are authenticated via Clerk
-    - Database maintains video metadata and relationships to users
 
 ### Implementation Details
 
@@ -108,10 +104,7 @@ sequenceDiagram
 
     - Failed generations are tracked in database
     - Users notified of failures
-    - Automatic cleanup of incomplete or failed jobs
 
 5. **Testing**
-    - Jest test suite for API endpoints
-    - Integration tests for RunPod interaction
-    - Webhook handling verification
-    - Database operations validation
+    - Unit tests for API endpoints
+    - Integration tests for some endpoints
