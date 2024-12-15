@@ -50,7 +50,11 @@ export function VideoGrid({
 	const sortedVideos = [...filteredVideos].sort((a, b) => {
 		switch (sortOption) {
 			case "newest":
+				if (a.status === "completed" && b.status !== "completed") return -1;
+				if (b.status === "completed" && a.status !== "completed") return 1;
+
 				return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
 			case "oldest":
 				return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
 			case "name_asc":

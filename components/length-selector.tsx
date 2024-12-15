@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
+import { getSeconds } from "@/lib/time";
 
 const frameOptions = [
 	7, 13, 19, 25, 31, 37, 43, 49, 55, 61, 67, 73, 79, 85, 91, 97, 103, 109, 115, 121, 127,
@@ -18,10 +19,6 @@ interface LengthSelectorProps {
 
 export function LengthSelector({ numFrames, onChange }: LengthSelectorProps) {
 	const [open, setOpen] = useState(false);
-
-	const getSeconds = (frames: number) => {
-		return (frames / 24).toFixed(2);
-	};
 
 	const handleFrameChange = (value: number[]) => {
 		const index = Math.round((value[0] - 1) / 0.2);

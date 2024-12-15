@@ -29,8 +29,8 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getSeconds } from "@/lib/time";
 import { Video } from "@/types";
-import { framesToSeconds } from "@/utils/format";
 
 interface VideoCardProps {
 	video: Video;
@@ -61,6 +61,8 @@ export function VideoCard({ video, onDelete, onCopySettings, isListView }: Video
 
 	const hasValidUrl = video.url && video.url.length > 0;
 
+	const duration = getSeconds(video.frames);
+
 	if (isListView) {
 		return (
 			<div className="flex items-center justify-between py-2 px-3 bg-card hover:bg-accent/50 rounded-md">
@@ -71,7 +73,7 @@ export function VideoCard({ video, onDelete, onCopySettings, isListView }: Video
 							{video.frames && (
 								<span className="flex items-center">
 									<Clock3 className="h-3 w-3 mr-1" />
-									{framesToSeconds(video.frames)}
+									{duration}s
 								</span>
 							)}
 							{video.status === "processing" && (
@@ -230,7 +232,7 @@ export function VideoCard({ video, onDelete, onCopySettings, isListView }: Video
 						{video.frames && (
 							<span className="flex items-center">
 								<Clock3 className="h-3 w-3 mr-1" />
-								{framesToSeconds(video.frames)}
+								{duration}s
 							</span>
 						)}
 						{video.status === "processing" && (
