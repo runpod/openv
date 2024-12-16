@@ -195,11 +195,11 @@ export const useVideosStore = create<VideosState>()(
 					const updatedVideos = await response.json();
 
 					set(state => {
-						const videoMap = new Map(state.videos.map(v => [v.jobId, v]));
+						const videoMap = new Map(state.videos.map(v => [v.id, v]));
 						let newestTimestamp = state.currentTimestamp;
 
 						updatedVideos.forEach((video: Video) => {
-							videoMap.set(video.jobId, video);
+							videoMap.set(video.id, video);
 							if (video.updatedAt && video.updatedAt > newestTimestamp!) {
 								newestTimestamp = video.updatedAt;
 							}

@@ -1,34 +1,9 @@
 import { NextResponse } from "next/server";
-import RunPod from "runpod-sdk";
 
 import { auth, requireAuth } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 import { ratelimitConfig } from "@/lib/ratelimiter";
-
-// Initialize RunPod client
-const runpod = new RunPod(process.env.RUNPOD_API_KEY);
-const endpoint = runpod.endpoint(process.env.RUNPOD_ENDPOINT_ID);
-
-// Retry function with exponential backoff
-async function retryWithExponentialBackoff<T>(
-	fn: () => Promise<T>,
-	maxRetries = 3,
-	baseDelay = 1000
-): Promise<T> {
-	let lastError: Error | null = null;
-
-	for (let i = 0; i < maxRetries; i++) {
-		try {
-			return await fn();
-		} catch (error) {
-			lastError = error as Error;
-			const delay = baseDelay * Math.pow(2, i);
-			await new Promise(resolve => setTimeout(resolve, delay));
-		}
-	}
-
-	throw lastError;
-}
+import { createVideo } from "@/utils/data/video/videoCreate";
+import { videoSubmit } from "@/utils/data/video/videoSubmit";
 
 export async function POST(request: Request) {
 	try {
@@ -53,63 +28,47 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
 		}
 
-		// Validate webhook token
-		const webhookToken = process.env.RUNPOD_WEBHOOK_TOKEN;
-		if (!webhookToken) {
-			return NextResponse.json({ error: "Webhook token not configured" }, { status: 500 });
-		}
-
-		// Create webhook URL
-		const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-		if (!appUrl) {
-			return NextResponse.json({ error: "App URL not configured" }, { status: 500 });
-		}
-
-		const webhookUrl = new URL("/api/runpod/webhook", appUrl);
-		webhookUrl.searchParams.set("token", webhookToken);
-
-		// Submit job to RunPod
-		const response = await retryWithExponentialBackoff(async () => {
-			const result = await endpoint.run({
-				input,
-				webhook: webhookUrl.toString(),
-			});
-
-			if (!result?.id) {
-				throw new Error("Invalid RunPod response: missing job ID");
-			}
-
-			return result;
+		// Create initial video record
+		const { video: createdVideo, error: createError } = await createVideo({
+			userId,
+			prompt,
+			modelName,
+			frames,
+			negativePrompt: input.negative_prompt,
+			width: input.width,
+			height: input.height,
+			seed: input.seed,
+			steps: input.steps,
+			cfg: input.cfg,
 		});
 
-		// Create video record
-		const video = await prisma.video.create({
-			data: {
-				jobId: response.id,
-				userId,
-				prompt,
-				modelName,
-				frames,
-				status: "queued",
-				...(input.negative_prompt && {
-					negativePrompt: input.negative_prompt,
-				}),
-				...(input.width && { width: input.width }),
-				...(input.height && { height: input.height }),
-				...(input.seed && { seed: input.seed }),
-				...(input.steps && { steps: input.steps }),
-				...(input.cfg && { cfg: input.cfg }),
-			},
+		if (createError || !createdVideo) {
+			return NextResponse.json(
+				{ error: createError || "Failed to create video" },
+				{ status: 500 }
+			);
+		}
+
+		// Submit to RunPod
+		const { jobId, error: submitError } = await videoSubmit({
+			video: createdVideo,
 		});
 
-		return NextResponse.json(video);
+		if (submitError || !jobId) {
+			return NextResponse.json(
+				{ error: submitError || "Failed to submit to RunPod" },
+				{ status: 500 }
+			);
+		}
+
+		return NextResponse.json(createdVideo);
 	} catch (error: any) {
 		if (error.message === "Unauthorized") {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
-		console.error("Error submitting RunPod job:", error);
+		console.error("Error in video generation:", error);
 		return NextResponse.json(
-			{ error: error?.message || "Failed to submit RunPod job" },
+			{ error: error?.message || "Internal server error" },
 			{ status: error?.status || 500 }
 		);
 	}
@@ -122,13 +81,9 @@ export async function GET(request: Request) {
 			return NextResponse.json({ error: "RunPod not configured" }, { status: 500 });
 		}
 
-		// Get health status
-		const health = await retryWithExponentialBackoff(async () => {
-			const result = await endpoint.healthCheck();
-			return { status: result?.status || "unhealthy" };
-		});
-
-		return NextResponse.json(health);
+		// Get health status using videoSubmit helper's RunPod client
+		const health = await endpoint.healthCheck();
+		return NextResponse.json({ status: health?.status || "unhealthy" });
 	} catch (error: any) {
 		console.error("Error fetching RunPod health:", error);
 		return NextResponse.json(

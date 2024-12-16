@@ -245,11 +245,19 @@ sequenceDiagram
 
     Solution: Add the following parameters to your `DATABASE_URL`:
 
+    For serverless environments (e.g., Vercel):
+
     ```
     ?pgbouncer=true&connection_limit=1
     ```
 
-    Example:
+    For local development or dedicated servers:
+
+    ```
+    ?pgbouncer=true
+    ```
+
+    Example for serverless:
 
     ```
     DATABASE_URL="postgresql://user:password@host:6543/postgres?pgbouncer=true&connection_limit=1"
@@ -259,7 +267,8 @@ sequenceDiagram
 
     - `pgbouncer=true` disables Prisma from generating prepared statements (required for PgBouncer
       in transaction mode)
-    - `connection_limit=1` is needed for serverless environments
+    - `connection_limit=1` is needed ONLY in serverless environments to prevent connection pool
+      exhaustion
 
     Note: Make sure to use port 6543 for the pooled connection (DATABASE_URL) and port 5432 for the
     direct connection (DIRECT_URL).

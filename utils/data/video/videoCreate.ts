@@ -1,7 +1,6 @@
 import prisma from "@/lib/prisma";
 
-interface VideoCreateParams {
-	jobId: string;
+interface CreateVideoParams {
 	userId: string;
 	prompt: string;
 	modelName?: string;
@@ -14,8 +13,7 @@ interface VideoCreateParams {
 	cfg?: number;
 }
 
-export async function videoCreate({
-	jobId,
+export async function createVideo({
 	userId,
 	prompt,
 	modelName,
@@ -26,22 +24,21 @@ export async function videoCreate({
 	seed,
 	steps,
 	cfg,
-}: VideoCreateParams) {
+}: CreateVideoParams) {
 	try {
 		const video = await prisma.video.create({
 			data: {
-				jobId,
 				userId,
 				prompt,
 				modelName,
 				frames,
+				status: "queued",
 				negativePrompt,
 				width,
 				height,
 				seed,
 				steps,
 				cfg,
-				status: "queued",
 			},
 		});
 
@@ -51,6 +48,23 @@ export async function videoCreate({
 		return {
 			video: null,
 			error: error instanceof Error ? error.message : "Failed to create video",
+		};
+	}
+}
+
+export async function updateVideoJobId(videoId: number, jobId: string) {
+	try {
+		const video = await prisma.video.update({
+			where: { id: videoId },
+			data: { jobId },
+		});
+
+		return { video, error: null };
+	} catch (error) {
+		console.error("Error updating video job ID:", error);
+		return {
+			video: null,
+			error: error instanceof Error ? error.message : "Failed to update video job ID",
 		};
 	}
 }

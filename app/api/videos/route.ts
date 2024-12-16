@@ -1,7 +1,53 @@
+import type { video } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { auth, requireAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { videoSubmit } from "@/utils/data/video/videoSubmit";
+
+const MAX_RETRIES = 2;
+
+// Helper to determine if error is retryable
+function isRetryableError(error?: string | null): boolean {
+	if (!error) return false;
+
+	// Add known retryable error messages
+	const retryableErrors = [
+		"timeout",
+		"connection failed",
+		"server error",
+		"internal error",
+		"503",
+		"500",
+	];
+
+	return retryableErrors.some(e => error.toLowerCase().includes(e));
+}
+
+async function handleVideoRetry(video: video) {
+	if (
+		video.status === "failed" &&
+		video.retryCount < MAX_RETRIES &&
+		isRetryableError(video.error)
+	) {
+		// Reset status and increment retry counter
+		await prisma.video.update({
+			where: { id: video.id },
+			data: {
+				status: "queued",
+				error: null,
+				retryCount: video.retryCount + 1,
+				updatedAt: new Date(),
+			},
+		});
+
+		// Submit job using the helper
+		const { error } = await videoSubmit({ video, isRetry: true });
+		if (error) {
+			console.error("Failed to trigger retry for video:", video.id, error);
+		}
+	}
+}
 
 export async function GET(request: Request) {
 	try {
@@ -54,8 +100,22 @@ export async function GET(request: Request) {
 				frames: true,
 				createdAt: true,
 				updatedAt: true,
+				error: true,
+				retryCount: true,
+				modelName: true,
+				negativePrompt: true,
+				width: true,
+				height: true,
+				seed: true,
+				steps: true,
+				cfg: true,
 			},
 		});
+
+		// Check for failed videos that need retry
+		for (const video of videos) {
+			await handleVideoRetry(video);
+		}
 
 		return NextResponse.json(videos);
 	} catch (error: any) {

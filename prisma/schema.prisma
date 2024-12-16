@@ -74,7 +74,7 @@ model invoices {
 
 model video {
   id          Int      @id @default(autoincrement())
-  jobId       String   @unique
+  jobId       String?  @unique
   userId      String
   prompt      String
   status      String   @default("queued") // queued, processing, completed, failed
@@ -84,6 +84,7 @@ model video {
   frames      Int?     // number of frames in the video
   url         String?
   error       String?
+  retryCount  Int      @default(0)
   
   // RunPod input parameters
   negativePrompt String?

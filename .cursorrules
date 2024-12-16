@@ -65,6 +65,7 @@ from Supabase managed with Prisma, authentication with Clerk and writing tests w
 - Use appropriate field types and constraints
 - Debugging: The error `The "payload" argument must be of type object. Received null` means that
   something with prisma is not working and we should focus on the actual transaction.
+- Use the scripts from package.json to manage the database (like `yarn prisma:migrate`)
 
 ## Authentication with Clerk
 
