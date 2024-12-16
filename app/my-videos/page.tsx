@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { PromptInput } from "@/components/prompt-input";
@@ -35,22 +36,22 @@ export default function MyVideosPage() {
 
 	const [mounted, setMounted] = useState(false);
 
-	// Initialize store and set mounted state
-	useEffect(() => {
-		initialize().then(() => setMounted(true));
-	}, [initialize]);
-
-	// Poll for video updates
-	useEffect(() => {
-		const interval = setInterval(async () => {
+	const { data: updatedVideos } = useQuery({
+		queryKey: ["videos", "polling"],
+		queryFn: async () => {
 			const processingCount = getProcessingCount();
 			if (processingCount > 0) {
 				await fetchUpdatedVideos();
 			}
-		}, 20000);
+			return null;
+		},
+		refetchInterval: 20000,
+	});
 
-		return () => clearInterval(interval);
-	}, [fetchUpdatedVideos, getProcessingCount]);
+	// Initialize store and set mounted state
+	useEffect(() => {
+		initialize().then(() => setMounted(true));
+	}, [initialize]);
 
 	const handleGenerate = async () => {
 		if (!prompt) return;
