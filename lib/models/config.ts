@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+// System-wide configuration that cannot be changed by users
+export const systemConfig = {
+	concurrentJobs: {
+		max: 3,
+	},
+} as const;
+
 export const MODEL_NAMES = ["mochi-1"] as const;
 export type ModelName = (typeof MODEL_NAMES)[number];
 

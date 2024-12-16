@@ -106,7 +106,7 @@ export default function MyVideosPage() {
 		.map(video => ({
 			id: video.id.toString(),
 			prompt: video.prompt,
-			status: "processing" as const,
+			status: video.status as "queued" | "processing" | "completed",
 		}));
 
 	if (!mounted) {

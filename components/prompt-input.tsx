@@ -12,7 +12,9 @@ import { SeedSelector } from "@/components/seed-selector";
 import { StepsSelector } from "@/components/steps-selector";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useModelSettings } from "@/hooks/use-model-settings";
+import { systemConfig } from "@/lib/models/config";
 import { VideoSettings } from "@/types";
 
 interface PromptInputProps {
@@ -86,6 +88,9 @@ export function PromptInput({
 		}
 	};
 
+	const queuedCount = queueItems.filter(item => item.status === "queued").length;
+	const isQueueFull = queuedCount >= systemConfig.concurrentJobs.max;
+
 	return (
 		<div className="relative bg-secondary p-2 rounded-lg shadow-md">
 			<div className="relative">
@@ -150,22 +155,39 @@ export function PromptInput({
 							{charCount} / {limits.prompt.maxLength}
 						</span>
 						<QueueButton queueItems={queueItems} isProcessing={isGenerating} />
-						<Button
-							variant="default"
-							className="text-primary-foreground bg-primary hover:bg-primary/90 w-[100px] flex-1"
-							onClick={handleGenerate}
-							disabled={
-								prompt.trim() === "" ||
-								isGenerating ||
-								charCount > limits.prompt.maxLength
-							}
-						>
-							{isGenerating ? (
-								<Loader2 className="h-4 w-4 animate-spin" />
-							) : (
-								"Generate"
-							)}
-						</Button>
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<div>
+										<Button
+											variant="default"
+											className="text-primary-foreground bg-primary hover:bg-primary/90 w-[100px] flex-1"
+											onClick={handleGenerate}
+											disabled={
+												prompt.trim() === "" ||
+												isGenerating ||
+												charCount > limits.prompt.maxLength ||
+												isQueueFull
+											}
+										>
+											{isGenerating ? (
+												<Loader2 className="h-4 w-4 animate-spin" />
+											) : (
+												"Generate"
+											)}
+										</Button>
+									</div>
+								</TooltipTrigger>
+								{isQueueFull && (
+									<TooltipContent>
+										<p>
+											You can only generate {systemConfig.concurrentJobs.max}{" "}
+											videos at the same time
+										</p>
+									</TooltipContent>
+								)}
+							</Tooltip>
+						</TooltipProvider>
 					</div>
 				</div>
 			</div>

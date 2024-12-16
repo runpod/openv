@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { auth, requireAuth } from "@/lib/auth";
 import { validateVideoInput } from "@/lib/models/config";
 import { ratelimitConfig } from "@/lib/ratelimiter";
+import { checkConcurrentJobs } from "@/utils/data/video/videoCheck";
 import { createVideo } from "@/utils/data/video/videoCreate";
 import { videoSubmit } from "@/utils/data/video/videoSubmit";
 
@@ -21,6 +22,12 @@ export async function POST(request: Request) {
 		const authResult = await auth();
 		requireAuth(authResult);
 		const { userId } = authResult;
+
+		// Check concurrent jobs
+		const { count, allowed, error } = await checkConcurrentJobs(userId);
+		if (!allowed) {
+			return NextResponse.json({ error, count }, { status: 409 });
+		}
 
 		// Parse and validate request body
 		const body = await request.json();
@@ -77,7 +84,9 @@ export async function POST(request: Request) {
 			);
 		}
 
-		return NextResponse.json(createdVideo);
+		// Get updated job count after successful creation
+		const { count: updatedCount } = await checkConcurrentJobs(userId);
+		return NextResponse.json({ ...createdVideo, count: updatedCount });
 	} catch (error: any) {
 		if (error.message === "Unauthorized") {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

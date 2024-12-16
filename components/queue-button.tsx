@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { systemConfig } from "@/lib/models/config";
 
 export interface QueueItem {
 	id: string;
@@ -17,7 +18,7 @@ interface QueueButtonProps {
 	isProcessing: boolean;
 }
 
-export function QueueButton({ queueItems, isProcessing }: QueueButtonProps) {
+export function QueueButton({ queueItems }: QueueButtonProps) {
 	const [open, setOpen] = useState(false);
 
 	const getStatusIcon = (status: QueueItem["status"]) => {
@@ -30,14 +31,19 @@ export function QueueButton({ queueItems, isProcessing }: QueueButtonProps) {
 	};
 
 	const activeQueueItems = queueItems.filter(item => item.status !== "completed");
+	const queuedCount = queueItems.filter(item => item.status === "queued").length;
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button variant="outline" className="h-8 px-2 text-xs flex items-center space-x-1">
+				<Button
+					variant="outline"
+					className="h-8 w-[68px] px-2 text-xs flex items-center space-x-1"
+				>
 					<ListIcon className="h-3 w-3" />
-					<span>{activeQueueItems.length}</span>
-					{isProcessing && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+					<span className="w-[32px] text-right">
+						{queuedCount} / {systemConfig.concurrentJobs.max}
+					</span>
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent className="w-80 popover-content">
