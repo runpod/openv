@@ -12,6 +12,7 @@ import { SeedSelector } from "@/components/seed-selector";
 import { StepsSelector } from "@/components/steps-selector";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useModelSettings } from "@/hooks/use-model-settings";
 import { VideoSettings } from "@/types";
 
 interface PromptInputProps {
@@ -44,55 +45,32 @@ export function PromptInput({
 	queueItems,
 }: PromptInputProps) {
 	const [charCount, setCharCount] = useState(0);
-	const MAX_CHARS = 500;
+	const { limits, aspectRatios } = useModelSettings();
 
 	useEffect(() => {
 		setCharCount(prompt.length);
 	}, [prompt]);
 
 	const handleGenerate = () => {
-		if (prompt.trim() === "" || charCount > MAX_CHARS) {
+		if (prompt.trim() === "" || charCount > limits.prompt.maxLength) {
 			return;
 		}
 		onGenerate(prompt);
 	};
 
-	const getButtonContent = () => {
-		if (isGenerating) {
-			return (
-				<>
-					<Loader2 className="h-5 w-5 animate-spin mr-2" />
-					Generating...
-				</>
-			);
-		}
-		return "Generate";
-	};
-
 	const handleAspectRatioChange = (aspectRatio: "16:9" | "9:16" | "1:1") => {
-		let newWidth, newHeight;
-		switch (aspectRatio) {
-			case "16:9":
-				newWidth = 848;
-				newHeight = 480;
-				break;
-			case "9:16":
-				newWidth = 480;
-				newHeight = 848;
-				break;
-			case "1:1":
-				newWidth = 640;
-				newHeight = 640;
-				break;
-		}
-		setVideoSettings({ ...videoSettings, width: newWidth, height: newHeight });
+		const { width, height } = aspectRatios[aspectRatio];
+		setVideoSettings({ ...videoSettings, width, height });
 	};
 
 	const getCurrentAspectRatio = (): "16:9" | "9:16" | "1:1" => {
 		const { width, height } = videoSettings;
-		if (width === 848 && height === 480) return "16:9";
-		if (width === 480 && height === 848) return "9:16";
-		if (width === 640 && height === 640) return "1:1";
+		if (width === aspectRatios["16:9"].width && height === aspectRatios["16:9"].height)
+			return "16:9";
+		if (width === aspectRatios["9:16"].width && height === aspectRatios["9:16"].height)
+			return "9:16";
+		if (width === aspectRatios["1:1"].width && height === aspectRatios["1:1"].height)
+			return "1:1";
 		return "16:9";
 	};
 
@@ -103,7 +81,9 @@ export function PromptInput({
 	};
 
 	const handleNegativePromptChange = (negativePrompt: string) => {
-		setVideoSettings({ ...videoSettings, negativePrompt });
+		if (negativePrompt.length <= limits.negativePrompt.maxLength) {
+			setVideoSettings({ ...videoSettings, negativePrompt });
+		}
 	};
 
 	return (
@@ -113,7 +93,7 @@ export function PromptInput({
 					placeholder="Describe your video..."
 					value={prompt}
 					onChange={e => {
-						if (e.target.value.length <= MAX_CHARS) {
+						if (e.target.value.length <= limits.prompt.maxLength) {
 							setPrompt(e.target.value);
 						}
 					}}
@@ -137,37 +117,54 @@ export function PromptInput({
 							onChange={frames =>
 								setVideoSettings({ ...videoSettings, numFrames: frames })
 							}
+							min={limits.numFrames.min}
+							max={limits.numFrames.max}
 						/>
 						<StepsSelector
 							steps={videoSettings.steps}
 							onChange={steps => setVideoSettings({ ...videoSettings, steps })}
+							min={limits.steps.min}
+							max={limits.steps.max}
 						/>
 						<CfgSelector
 							cfg={videoSettings.cfg}
 							onChange={cfg => setVideoSettings({ ...videoSettings, cfg })}
+							min={limits.cfg.min}
+							max={limits.cfg.max}
 						/>
 						<SeedSelector
 							seed={seed}
 							isRandomSeed={isRandomSeed}
 							onChange={handleSeedChange}
+							min={limits.seed.min}
+							max={limits.seed.max}
 						/>
 						<NegativePromptSelector
 							negativePrompt={videoSettings.negativePrompt}
 							onChange={handleNegativePromptChange}
+							maxLength={limits.negativePrompt.maxLength}
 						/>
 					</div>
 					<div className="backdrop-blur-sm rounded-md p-2 flex items-center space-x-2">
 						<span className="text-sm text-muted-foreground">
-							{charCount} / {MAX_CHARS}
+							{charCount} / {limits.prompt.maxLength}
 						</span>
 						<QueueButton queueItems={queueItems} isProcessing={isGenerating} />
 						<Button
 							variant="default"
-							className="text-primary-foreground bg-primary hover:bg-primary/90 flex-1"
+							className="text-primary-foreground bg-primary hover:bg-primary/90 w-[100px] flex-1"
 							onClick={handleGenerate}
-							disabled={prompt.trim() === "" || isGenerating || charCount > MAX_CHARS}
+							disabled={
+								prompt.trim() === "" ||
+								isGenerating ||
+								charCount > limits.prompt.maxLength
+							}
 						>
-							{getButtonContent()}
+							{isGenerating ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								"Generate"
+							)}
 						</Button>
 					</div>
 				</div>

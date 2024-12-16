@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { ZodError } from "zod";
 
 import { auth, requireAuth } from "@/lib/auth";
+import { validateVideoInput } from "@/lib/models/config";
 import { ratelimitConfig } from "@/lib/ratelimiter";
 import { createVideo } from "@/utils/data/video/videoCreate";
 import { videoSubmit } from "@/utils/data/video/videoSubmit";
@@ -20,26 +22,40 @@ export async function POST(request: Request) {
 		requireAuth(authResult);
 		const { userId } = authResult;
 
-		// Parse request body
+		// Parse and validate request body
 		const body = await request.json();
-		const { prompt, modelName, frames, input } = body;
 
-		if (!prompt) {
-			return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
+		let validatedInput;
+		try {
+			validatedInput = validateVideoInput(body);
+		} catch (e) {
+			if (e instanceof ZodError) {
+				return NextResponse.json(
+					{
+						error: "Validation failed",
+						details: e.errors.map(err => ({
+							field: err.path.join("."),
+							message: err.message,
+						})),
+					},
+					{ status: 400 }
+				);
+			}
+			throw e;
 		}
 
 		// Create initial video record
 		const { video: createdVideo, error: createError } = await createVideo({
 			userId,
-			prompt,
-			modelName,
-			frames,
-			negativePrompt: input.negative_prompt,
-			width: input.width,
-			height: input.height,
-			seed: input.seed,
-			steps: input.steps,
-			cfg: input.cfg,
+			prompt: validatedInput.prompt,
+			modelName: validatedInput.modelName,
+			frames: validatedInput.input.num_frames,
+			negativePrompt: validatedInput.input.negative_prompt,
+			width: validatedInput.input.width,
+			height: validatedInput.input.height,
+			seed: validatedInput.input.seed,
+			steps: validatedInput.input.steps,
+			cfg: validatedInput.input.cfg,
 		});
 
 		if (createError || !createdVideo) {

@@ -13,22 +13,28 @@ interface SeedSelectorProps {
 	seed: number;
 	isRandomSeed: boolean;
 	onChange: (seed: number, isRandom: boolean) => void;
+	min: number;
+	max: number;
 }
 
-export function SeedSelector({ seed, isRandomSeed, onChange }: SeedSelectorProps) {
+export function SeedSelector({ seed, isRandomSeed, onChange, min, max }: SeedSelectorProps) {
 	const [open, setOpen] = useState(false);
 	const [localSeed, setLocalSeed] = useState(seed);
 	const [localIsRandom, setLocalIsRandom] = useState(isRandomSeed);
 
 	const handleSeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newSeed = parseInt(e.target.value);
-		setLocalSeed(isNaN(newSeed) ? 0 : newSeed);
+		if (isNaN(newSeed)) {
+			setLocalSeed(min);
+		} else {
+			setLocalSeed(Math.max(min, Math.min(max, newSeed)));
+		}
 	};
 
 	const handleRandomToggle = (checked: boolean) => {
 		setLocalIsRandom(checked);
 		if (checked) {
-			setLocalSeed(Math.floor(Math.random() * 1000000));
+			setLocalSeed(Math.floor(Math.random() * (max - min + 1)) + min);
 		}
 	};
 
@@ -57,12 +63,13 @@ export function SeedSelector({ seed, isRandomSeed, onChange }: SeedSelectorProps
 						<Label htmlFor="random-mode">Random</Label>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="seed">Seed value</Label>
 						<Input
 							id="seed"
 							type="number"
 							value={localSeed}
 							onChange={handleSeedChange}
+							min={min}
+							max={max}
 							disabled={localIsRandom}
 						/>
 					</div>

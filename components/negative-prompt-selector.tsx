@@ -11,14 +11,22 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 interface NegativePromptSelectorProps {
 	negativePrompt: string;
 	onChange: (negativePrompt: string) => void;
+	maxLength: number;
 }
 
-export function NegativePromptSelector({ negativePrompt, onChange }: NegativePromptSelectorProps) {
+export function NegativePromptSelector({
+	negativePrompt,
+	onChange,
+	maxLength,
+}: NegativePromptSelectorProps) {
 	const [open, setOpen] = useState(false);
 	const [localNegativePrompt, setLocalNegativePrompt] = useState(negativePrompt);
 
 	const handleNegativePromptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setLocalNegativePrompt(e.target.value);
+		const newValue = e.target.value;
+		if (newValue.length <= maxLength) {
+			setLocalNegativePrompt(newValue);
+		}
 	};
 
 	const handleApply = () => {
@@ -31,22 +39,26 @@ export function NegativePromptSelector({ negativePrompt, onChange }: NegativePro
 			<PopoverTrigger asChild>
 				<Button variant="outline" className="h-8 px-2 text-xs">
 					<Ban className="mr-1 h-3 w-3" />
-					Prompt
+					{localNegativePrompt ? "Set" : "None"}
 				</Button>
 			</PopoverTrigger>
 			<PopoverContent className="w-80 popover-content">
 				<div className="space-y-4">
-					<h4 className="font-medium leading-none">Prompt to Avoid</h4>
+					<h4 className="font-medium leading-none">Negative Prompt</h4>
 					<div className="space-y-2">
 						<Label htmlFor="negative-prompt">
-							Describe what you don't want in the video
+							Describe what you don't want in the video (max {maxLength} chars)
 						</Label>
 						<Input
 							id="negative-prompt"
 							value={localNegativePrompt}
 							onChange={handleNegativePromptChange}
 							placeholder="Enter negative prompt..."
+							maxLength={maxLength}
 						/>
+						<div className="text-xs text-muted-foreground text-right">
+							{localNegativePrompt.length} / {maxLength}
+						</div>
 					</div>
 					<Button onClick={handleApply}>Apply</Button>
 				</div>

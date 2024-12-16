@@ -11,6 +11,47 @@ interface AspectRatioSelectorProps {
 	onChange: (aspectRatio: "16:9" | "9:16" | "1:1") => void;
 }
 
+const AspectRatioIcon = ({ ratio }: { ratio: "16:9" | "9:16" | "1:1" }) => {
+	switch (ratio) {
+		case "16:9":
+			return (
+				<svg
+					viewBox="0 0 24 24"
+					className="h-4 w-4 mr-2"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+				>
+					<rect x="3" y="6" width="18" height="12" rx="1" />
+				</svg>
+			);
+		case "9:16":
+			return (
+				<svg
+					viewBox="0 0 24 24"
+					className="h-4 w-4 mr-2"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+				>
+					<rect x="7" y="3" width="10" height="18" rx="1" />
+				</svg>
+			);
+		case "1:1":
+			return (
+				<svg
+					viewBox="0 0 24 24"
+					className="h-4 w-4 mr-2"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+				>
+					<rect x="5" y="5" width="14" height="14" rx="1" />
+				</svg>
+			);
+	}
+};
+
 export function AspectRatioSelector({ aspectRatio, onChange }: AspectRatioSelectorProps) {
 	const [open, setOpen] = useState(false);
 
@@ -28,17 +69,14 @@ export function AspectRatioSelector({ aspectRatio, onChange }: AspectRatioSelect
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button variant="outline" className="h-8 px-2 text-xs">
+				<Button variant="outline" className="h-8 w-[68px] px-2 text-xs">
 					<AspectRatio className="mr-1 h-3 w-3" />
-					{aspectRatio}
+					<span className="w-[28px] text-right">{aspectRatio}</span>
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent className="w-48 popover-content">
+			<PopoverContent className="w-36 popover-content">
 				<div className="space-y-2">
 					<h4 className="font-medium leading-none">Aspect Ratio</h4>
-					<p className="text-sm text-muted-foreground">
-						Select the aspect ratio for your video
-					</p>
 					<div className="flex flex-col space-y-2">
 						{aspectRatios.map(ratio => (
 							<Button
@@ -49,7 +87,8 @@ export function AspectRatioSelector({ aspectRatio, onChange }: AspectRatioSelect
 								}
 								className="justify-start"
 							>
-								{ratio.label} ({ratio.width}x{ratio.height})
+								<AspectRatioIcon ratio={ratio.label as "16:9" | "9:16" | "1:1"} />
+								{ratio.label}
 							</Button>
 						))}
 					</div>
