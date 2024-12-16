@@ -55,9 +55,9 @@ sequenceDiagram
 
     - User enters a prompt and requests video generation
     - Frontend submits request to `/api/runpod` endpoint
-    - Creates a new video record in the database with status "PENDING"
-    - Sends request to RunPod API with the prompt and configuration
-    - Returns job ID and status to frontend
+    - Creates a new video record in the database with status "queued"
+    - Centralized `videoSubmit` helper handles RunPod submission and database updates
+    - Returns video information to frontend
 
 2. **RunPod Processing**
 
@@ -65,10 +65,12 @@ sequenceDiagram
     - Sends webhook updates to `/api/runpod/webhook` endpoint
     - Webhook payload includes job status and output URLs
 
-3. **Status Updates**
+3. **Status Updates and Retry Logic**
 
     - Webhook endpoint receives status updates from RunPod
-    - Updates video status in database (PENDING, PROCESSING, COMPLETED, FAILED)
+    - Updates video status in database (queued, processing, completed, failed)
+    - Failed videos with retryable errors are automatically resubmitted
+    - Maximum retry attempts are tracked to prevent infinite loops
     - Frontend polls the API for current status
     - Updates UI based on video status
 
@@ -90,9 +92,10 @@ sequenceDiagram
         - Generation status
         - User information
         - Prompt data
-        - RunPod job ID
+        - RunPod job ID (optional during creation)
         - Output URLs
         - Creation and update timestamps
+        - Retry count and error messages
 
 3. **Authentication**
 
