@@ -1,17 +1,15 @@
 "use client";
 
-import { useState } from "react";
-
 import InspirationGrid from "@/components/inspiration-grid";
+import { useVideosStore } from "@/hooks/use-videos-store";
 
 export default function InspirationPage() {
-	const [gridView, setGridView] = useState<"2x2" | "3x3" | "list">("2x2");
-	const [searchQuery, setSearchQuery] = useState("");
+	const { setPrompt, setSeed, gridView, setGridView, searchQuery, setSearchQuery } =
+		useVideosStore();
 
 	const applyVideoSettings = (video: { prompt: string; frames: number; seed: number }) => {
-		// This is just a stub - we'll need to implement state management
-		// to share these settings between pages
-		console.log("Settings applied:", video);
+		setPrompt(video.prompt);
+		if (video.seed) setSeed(video.seed);
 	};
 
 	return (

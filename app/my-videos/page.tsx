@@ -25,14 +25,15 @@ export default function MyVideosPage() {
 		deleteVideo,
 		initialize,
 		fetchUpdatedVideos,
+		gridView,
+		setGridView,
+		searchQuery,
+		setSearchQuery,
+		sortOption,
+		setSortOption,
 	} = useVideosStore();
 
 	const [mounted, setMounted] = useState(false);
-	const [searchQuery, setSearchQuery] = useState("");
-	const [sortOption, setSortOption] = useState<"newest" | "oldest" | "name_asc" | "name_desc">(
-		"newest"
-	);
-	const [gridView, setGridView] = useState<"2x2" | "3x3" | "list">("3x3");
 
 	// Initialize store and set mounted state
 	useEffect(() => {

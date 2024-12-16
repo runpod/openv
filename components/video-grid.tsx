@@ -50,9 +50,21 @@ export function VideoGrid({
 	const sortedVideos = [...filteredVideos].sort((a, b) => {
 		switch (sortOption) {
 			case "newest":
-				if (a.status === "completed" && b.status !== "completed") return -1;
-				if (b.status === "completed" && a.status !== "completed") return 1;
+				// First, prioritize processing/queued videos
+				if (
+					(a.status === "processing" || a.status === "queued") &&
+					b.status !== "processing" &&
+					b.status !== "queued"
+				)
+					return -1;
+				if (
+					(b.status === "processing" || b.status === "queued") &&
+					a.status !== "processing" &&
+					a.status !== "queued"
+				)
+					return 1;
 
+				// Then sort by creation date
 				return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 
 			case "oldest":
