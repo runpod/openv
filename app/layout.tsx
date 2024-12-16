@@ -2,13 +2,12 @@ import "@fontsource/inter";
 import "./globals.css";
 
 import { ClerkProvider } from "@clerk/nextjs";
-import { Analytics } from "@vercel/analytics/react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ReactNode } from "react";
 
-import Provider from "@/app/provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -39,34 +38,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
-			<head>
-				<link
-					rel="preload"
-					href="https://utfs.io/f/31dba2ff-6c3b-4927-99cd-b928eaa54d5f-5w20ij.png"
-					as="image"
-				/>
-				<link
-					rel="preload"
-					href="https://utfs.io/f/69a12ab1-4d57-4913-90f9-38c6aca6c373-1txg2.png"
-					as="image"
-				/>
-			</head>
-			<body
-				className={cn("min-h-screen bg-background font-sans antialiased", inter.className)}
-			>
+			<body className={cn("min-h-screen bg-background antialiased", inter.className)}>
 				<ClerkProvider>
-					<Provider>
-						<ThemeProvider
-							attribute="class"
-							defaultTheme="system"
-							enableSystem
-							disableTransitionOnChange
-						>
-							{children}
-						</ThemeProvider>
-					</Provider>
+					<ThemeProvider attribute="class" defaultTheme="dark">
+						{children}
+						<Toaster />
+					</ThemeProvider>
 				</ClerkProvider>
-				<Analytics />
 			</body>
 		</html>
 	);

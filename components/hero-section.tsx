@@ -31,11 +31,17 @@ export default function HeroSection() {
 			<div className="flex flex-col items-center">
 				<span className="relative mt-10 p-4">
 					<div className="relative">
-						<Link href={userId ? "/my-videos" : "/sign-in"}>
-							<Button size={null} className="px-8 py-6 font-semibold text-4xl">
-								Try for free*
-							</Button>
-						</Link>
+						{userId ? (
+							<Link href="/my-videos">
+								<Button size={null} className="px-8 py-6 font-semibold text-4xl">
+									Try for free*
+								</Button>
+							</Link>
+						) : (
+							<p className="text-6xl">
+								We are still cooking, use for free* very soon!
+							</p>
+						)}
 					</div>
 				</span>
 				<p className="text-sm text-muted-foreground mt-4">
