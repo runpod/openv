@@ -98,3 +98,14 @@ model video {
   @@index([status])
   @@index([createdAt])
 }
+
+model terms_acceptance {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  version   String
+  acceptedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, version])
+  @@index([userId])
+}

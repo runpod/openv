@@ -144,6 +144,100 @@ sequenceDiagram
     - Unit tests for API endpoints
     - Integration tests for some endpoints
 
+## Terms of Use Acceptance Flow
+
+The system enforces Terms of Use acceptance before users can access certain protected features.
+
+### Components
+
+1. **Database**
+
+    - `terms_acceptance` table tracks user acceptance:
+
+        ```prisma
+        model terms_acceptance {
+          id         Int      @id @default(autoincrement())
+          userId     String
+          version    String
+          acceptedAt DateTime @default(now())
+          updatedAt  DateTime @updatedAt
+
+          @@unique([userId, version])
+          @@index([userId])
+        }
+        ```
+
+2. **Middleware**
+
+    - Protects specific routes (e.g., `/my-videos`)
+    - Checks terms acceptance status via API
+    - Redirects to acceptance page if needed
+
+3. **API Endpoints**
+    - `/api/terms/check`: Verifies if user has accepted current version
+    - `/api/terms/accept`: Records user's acceptance
+
+### Version Management
+
+The current terms version is managed in `lib/terms.ts`:
+
+```typescript
+export const CURRENT_TOS_VERSION = "1.0.0";
+```
+
+To update terms:
+
+1. Update the terms content in `app/terms/terms.md`
+2. Increment `CURRENT_TOS_VERSION` in `lib/terms.ts`
+3. Users will be required to accept the new version before accessing protected routes
+
+### Protected Routes
+
+Configure which routes require terms acceptance in `middleware.ts`:
+
+```typescript
+const TOS_PROTECTED_PATHS = ["/my-videos"];
+```
+
+### Flow Sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant MW as Middleware
+    participant API as API
+    participant DB as Database
+    participant P as Protected Page
+
+    U->>P: Access protected route
+    P->>MW: Route request
+    MW->>API: Check terms acceptance
+    API->>DB: Query acceptance status
+    DB->>API: Return status
+    API->>MW: Return acceptance status
+
+    alt Terms Not Accepted
+        MW->>U: Redirect to /terms/accept
+        U->>API: Accept terms
+        API->>DB: Store acceptance
+        API->>U: Redirect to original route
+        U->>P: Access protected route
+        P->>MW: Route request
+        MW->>API: Check terms acceptance
+        API->>DB: Query acceptance status
+        DB->>API: Return status (accepted)
+        API->>MW: Return acceptance status
+        MW->>P: Allow access
+        P->>U: Show protected content
+    else Terms Already Accepted
+        MW->>P: Allow access
+        P->>U: Show protected content
+    end
+```
+
+The system maintains a history of all terms acceptances, allowing tracking of which versions each
+user has accepted and when.
+
 ## Video Generation and Status Updates
 
 ### Initial Video Creation

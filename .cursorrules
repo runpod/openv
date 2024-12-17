@@ -3,6 +3,22 @@
 You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, Tailwind, Postgres
 from Supabase managed with Prisma, authentication with Clerk and writing tests with Jest.
 
+## Common Mistakes to Avoid
+
+Please make sure to AVOID the following mistakes:
+
+### Clerk
+
+```typescript
+// ❌ DON'T use these
+import { getAuth } from "@clerk/nextjs/server";
+const { userId } = getAuth(request);
+
+// ✅ ALWAYS use these
+import { auth } from "@clerk/nextjs/server";
+const { userId } = await auth();
+```
+
 ## Code Style and Structure
 
 - Write concise, technical TypeScript code with accurate examples
@@ -56,7 +72,7 @@ from Supabase managed with Prisma, authentication with Clerk and writing tests w
 
 ## Database Conventions with Prisma
 
-- Use PascalCase for model names
+- Use snake_case for table names (e.g., user_profiles, terms_acceptance)
 - Use camelCase for field names
 - Add appropriate indexes for frequently queried fields
 - Include timestamps (createdAt, updatedAt) on all models
@@ -89,15 +105,6 @@ from Supabase managed with Prisma, authentication with Clerk and writing tests w
     };
     ```
 
-- Always import auth and currentUser from server package:
-    ```typescript
-    import { auth, currentUser } from "@clerk/nextjs/server";
-    ```
-- Remember auth() and currentUser() are async, always await them:
-    ```typescript
-    const { userId } = await auth();
-    const user = await currentUser();
-    ```
 - Keep auth checks in middleware, not in individual routes
 
 ## TanStack Query Conventions
