@@ -7,7 +7,7 @@ export default function InspirationPage() {
 	const { setPrompt, setSeed, gridView, setGridView, searchQuery, setSearchQuery } =
 		useVideosStore();
 
-	const applyVideoSettings = (video: { prompt: string; frames: number; seed: number }) => {
+	const applyVideoSettings = (video: { prompt: string; frames?: number; seed?: number }) => {
 		setPrompt(video.prompt);
 		if (video.seed) setSeed(video.seed);
 	};

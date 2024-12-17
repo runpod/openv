@@ -1,5 +1,22 @@
-import type { ResponseInit } from "node-fetch";
-import { Headers, Response } from "node-fetch";
+// @ts-nocheck
+
+import { Headers } from "node-fetch";
+
+declare global {
+	var fetch: jest.Mock;
+	var Response: typeof Response;
+	var Headers: typeof Headers;
+	var createResponse: (body: any, init?: globalThis.ResponseInit) => globalThis.Response;
+}
+
+interface CustomGlobal extends NodeJS.Global {
+	fetch: jest.Mock;
+	Response: typeof Response;
+	Headers: typeof Headers;
+	createResponse: (body: any, init?: globalThis.ResponseInit) => globalThis.Response;
+}
+
+declare const global: CustomGlobal;
 
 // Set test database URL
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -9,7 +26,7 @@ process.env.DIRECT_URL = process.env.TEST_DIRECT_URL || process.env.TEST_DATABAS
 global.fetch = jest.fn();
 
 // Mock Response constructor
-global.Response = Response as any;
+global.Response = Response;
 
 // Mock Headers constructor
 global.Headers = Headers as any;
@@ -17,21 +34,18 @@ global.Headers = Headers as any;
 // Mock Next.js server components
 jest.mock("next/server", () => {
 	const NextResponse = {
-		json: (body: any, init?: ResponseInit) => new Response(JSON.stringify(body), init),
+		json: (body: any, init?: globalThis.ResponseInit) =>
+			new Response(JSON.stringify(body), init),
 	};
 
 	class NextRequest extends Request {
-		constructor(input: RequestInfo | URL, init?: RequestInit) {
-			if (typeof input === "string") {
-				super(input, init);
-			} else if (input instanceof URL) {
-				super(input.toString(), init);
-			} else {
-				super(input);
-			}
-		}
+		public nextUrl: URL;
 
-		public nextUrl = new URL(this.url);
+		constructor(input: RequestInfo | URL, init?: RequestInit) {
+			const url = input instanceof URL ? input.toString() : input;
+			super(url, init);
+			this.nextUrl = new URL(this.url);
+		}
 	}
 
 	return {
@@ -41,6 +55,6 @@ jest.mock("next/server", () => {
 });
 
 // Helper to create Response objects in tests
-global.createResponse = (body: any, init?: ResponseInit) => {
+global.createResponse = (body: any, init?: globalThis.ResponseInit) => {
 	return new Response(JSON.stringify(body), init);
 };

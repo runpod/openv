@@ -25,11 +25,11 @@ interface VideosState {
 	setSortOption: (option: "newest" | "oldest" | "name_asc" | "name_desc") => void;
 	setIsRandomSeed: (isRandom: boolean) => void;
 	setSeed: (seed: number) => void;
-	updateVideoStatus: (id: string, status: Video["status"], url?: string) => void;
+	updateVideoStatus: (id: number, status: Video["status"], url?: string) => void;
 	addVideo: (video: Video) => void;
-	updateVideoJobId: (id: string, jobId: string) => void;
+	updateVideoJobId: (id: number, jobId: string) => void;
 	getProcessingCount: () => number;
-	deleteVideo: (id: string) => void;
+	deleteVideo: (id: number) => void;
 	setVideoSettings: (settings: VideoSettings) => void;
 }
 
@@ -81,7 +81,7 @@ export const useVideosStore = create<VideosState>()(
 						{
 							...video,
 							createdAt: new Date().toISOString(),
-							status: "generating",
+							status: "queued",
 						},
 					],
 					isGenerating: true,
@@ -94,7 +94,7 @@ export const useVideosStore = create<VideosState>()(
 
 			getProcessingCount: () => {
 				const state = get();
-				return state.videos.filter(v => v.status === "generating").length;
+				return state.videos.filter(v => v.status === "queued").length;
 			},
 
 			deleteVideo: id =>

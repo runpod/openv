@@ -21,7 +21,7 @@ function verifyToken(request: Request): boolean {
 }
 
 function mapStatus(status: string): string | null {
-	const validStatuses = {
+	const validStatuses: { [key: string]: string } = {
 		IN_QUEUE: "queued",
 		QUEUED: "queued",
 		IN_PROGRESS: "processing",

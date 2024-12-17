@@ -39,7 +39,8 @@ export default function InspirationGrid({
 
 	const handleApplySettings = (item: InspirationItem) => {
 		applyVideoSettings({
-			id: "",
+			id: 0,
+			userId: "",
 			prompt: item.prompt,
 			frames: item.frames,
 			url: item.image,
@@ -48,6 +49,7 @@ export default function InspirationGrid({
 			enhancePrompt: item.enhancePrompt,
 			jobId: "",
 			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
 		});
 		setCopiedSettings(item.title);
 		setTimeout(() => setCopiedSettings(null), 1000);

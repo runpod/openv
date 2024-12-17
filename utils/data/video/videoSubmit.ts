@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 
 // Initialize RunPod client
 const runpod = RunpodSdk(process.env.RUNPOD_API_KEY!);
-const endpoint = runpod.endpoint(process.env.RUNPOD_ENDPOINT_ID!);
+export const endpoint = runpod.endpoint(process.env.RUNPOD_ENDPOINT_ID!);
 
 // Retry function with exponential backoff
 async function retryWithExponentialBackoff<T>(
@@ -47,6 +47,9 @@ interface SubmitToRunPodParams {
 // Helper to submit job to RunPod with retries
 async function submitToRunPod({ input, webhookUrl }: SubmitToRunPodParams) {
 	return retryWithExponentialBackoff(async () => {
+		if (!endpoint) {
+			throw new Error("RunPod client not initialized");
+		}
 		const result = await endpoint.run({
 			input,
 			webhook: webhookUrl,

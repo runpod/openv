@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ReactNode } from "react";
 
+import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
@@ -41,8 +42,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 			<body className={cn("min-h-screen bg-background antialiased", inter.className)}>
 				<ClerkProvider>
 					<ThemeProvider attribute="class" defaultTheme="dark">
-						{children}
-						<Toaster />
+						<QueryProvider>
+							{children}
+							<Toaster />
+						</QueryProvider>
 					</ThemeProvider>
 				</ClerkProvider>
 			</body>

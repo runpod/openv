@@ -61,7 +61,7 @@ export function VideoCard({ video, onDelete, onCopySettings, isListView }: Video
 
 	const hasValidUrl = video.url && video.url.length > 0;
 
-	const duration = getSeconds(video.frames);
+	const duration = getSeconds(video.frames ?? 0);
 
 	if (isListView) {
 		return (

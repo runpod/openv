@@ -3,21 +3,12 @@ import { ZodError } from "zod";
 
 import { auth, requireAuth } from "@/lib/auth";
 import { validateVideoInput } from "@/lib/models/config";
-import { ratelimitConfig } from "@/lib/ratelimiter";
 import { checkConcurrentJobs } from "@/utils/data/video/videoCheck";
 import { createVideo } from "@/utils/data/video/videoCreate";
 import { videoSubmit } from "@/utils/data/video/videoSubmit";
 
 export async function POST(request: Request) {
 	try {
-		// Check rate limit
-		if (ratelimitConfig.enabled) {
-			const { success } = await ratelimitConfig.ratelimit.limit();
-			if (!success) {
-				return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-			}
-		}
-
 		// Get user ID from auth
 		const authResult = await auth();
 		requireAuth(authResult);
@@ -94,25 +85,6 @@ export async function POST(request: Request) {
 		console.error("Error in video generation:", error);
 		return NextResponse.json(
 			{ error: error?.message || "Internal server error" },
-			{ status: error?.status || 500 }
-		);
-	}
-}
-
-export async function GET(request: Request) {
-	try {
-		// Check if RunPod is configured
-		if (!process.env.RUNPOD_API_KEY || !process.env.RUNPOD_ENDPOINT_ID) {
-			return NextResponse.json({ error: "RunPod not configured" }, { status: 500 });
-		}
-
-		// Get health status using videoSubmit helper's RunPod client
-		const health = await endpoint.healthCheck();
-		return NextResponse.json({ status: health?.status || "unhealthy" });
-	} catch (error: any) {
-		console.error("Error fetching RunPod health:", error);
-		return NextResponse.json(
-			{ error: error?.message || "Failed to fetch RunPod health" },
 			{ status: error?.status || 500 }
 		);
 	}
