@@ -5,6 +5,8 @@ import { Video, VideoSettings } from "@/types";
 
 interface VideosState {
 	videos: Video[];
+	selectedVideoIds: number[];
+	selectMode: boolean;
 	prompt: string;
 	isGenerating: boolean;
 	gridView: "2x2" | "3x3" | "list";
@@ -22,6 +24,9 @@ interface VideosState {
 	setSortOption: (option: "newest" | "oldest" | "name_asc" | "name_desc") => void;
 	setIsRandomSeed: (isRandom: boolean) => void;
 	setSeed: (seed: number) => void;
+	toggleVideoSelection: (id: number) => void;
+	clearVideoSelection: () => void;
+	setSelectMode: (active: boolean) => void;
 	updateVideoStatus: (
 		jobId: string,
 		status: Video["status"],
@@ -31,6 +36,7 @@ interface VideosState {
 	addVideo: (video: Video) => void;
 	getProcessingCount: () => number;
 	deleteVideo: (id: number) => Promise<void>;
+	deleteSelectedVideos: () => Promise<void>;
 	setVideoSettings: (settings: VideoSettings) => void;
 	fetchVideos: () => Promise<void>;
 	fetchUpdatedVideos: () => Promise<void>;
@@ -51,6 +57,8 @@ export const useVideosStore = create<VideosState>()(
 	persist(
 		(set, get) => ({
 			videos: [],
+			selectedVideoIds: [],
+			selectMode: false,
 			prompt: "",
 			isGenerating: false,
 			gridView: "3x3",
@@ -69,6 +77,24 @@ export const useVideosStore = create<VideosState>()(
 			setSortOption: option => set({ sortOption: option }),
 			setIsRandomSeed: isRandom => set({ isRandomSeed: isRandom }),
 			setSeed: seed => set({ seed }),
+
+			toggleVideoSelection: (id: number) =>
+				set(state => ({
+					selectedVideoIds: state.selectedVideoIds.includes(id)
+						? state.selectedVideoIds.filter(videoId => videoId !== id)
+						: [...state.selectedVideoIds, id],
+				})),
+
+			clearVideoSelection: () => set({ selectedVideoIds: [] }),
+
+			setSelectMode: (active: boolean) => {
+				set(state => {
+					if (!active) {
+						return { selectMode: active, selectedVideoIds: [] };
+					}
+					return { selectMode: active };
+				});
+			},
 
 			updateVideoStatus: (jobId, status, url, error) =>
 				set(state => {
@@ -125,17 +151,24 @@ export const useVideosStore = create<VideosState>()(
 
 			deleteVideo: async (id: number) => {
 				try {
+					// Find the video to get its jobId
+					const video = get().videos.find(v => v.id === id);
+
+					if (!video?.jobId) {
+						throw new Error("Video not found or has no jobId");
+					}
+
 					const response = await fetch("/api/videos", {
 						method: "DELETE",
 						headers: {
 							"Content-Type": "application/json",
 						},
-						body: JSON.stringify({ id }),
+						body: JSON.stringify({ jobIds: [video.jobId] }),
 					});
 
 					if (!response.ok) {
-						const error = await response.json();
-						throw new Error(error.error || "Failed to delete video");
+						const data = await response.json();
+						throw new Error(data.error || "Failed to delete video");
 					}
 
 					set(state => ({
@@ -143,6 +176,44 @@ export const useVideosStore = create<VideosState>()(
 					}));
 				} catch (error) {
 					console.error("Error deleting video:", error);
+					throw error;
+				}
+			},
+
+			deleteSelectedVideos: async () => {
+				try {
+					const state = get();
+					const selectedVideos = state.videos.filter(v =>
+						state.selectedVideoIds.includes(v.id)
+					);
+
+					const jobIds = selectedVideos
+						.map(v => v.jobId)
+						.filter((jobId): jobId is string => !!jobId);
+
+					if (jobIds.length === 0) {
+						throw new Error("No valid videos selected for deletion");
+					}
+
+					const response = await fetch("/api/videos", {
+						method: "DELETE",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ jobIds }),
+					});
+
+					if (!response.ok) {
+						const data = await response.json();
+						throw new Error(data.error || "Failed to delete videos");
+					}
+
+					set(state => ({
+						videos: state.videos.filter(v => !state.selectedVideoIds.includes(v.id)),
+						selectedVideoIds: [],
+					}));
+				} catch (error) {
+					console.error("Error deleting videos:", error);
 					throw error;
 				}
 			},

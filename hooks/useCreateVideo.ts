@@ -33,7 +33,6 @@ export function useVideoStatus(jobId: string | null) {
 				throw new Error("Failed to fetch video status");
 			}
 			const data = await response.json();
-			console.log("Status response:", data);
 			return data;
 		},
 		enabled: !!jobId,

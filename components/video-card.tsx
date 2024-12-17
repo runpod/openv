@@ -15,6 +15,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -30,6 +31,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getSeconds } from "@/lib/time";
+import { useVideosStore } from "@/store/video-store";
 import { Video } from "@/types";
 
 interface VideoCardProps {
@@ -37,11 +39,21 @@ interface VideoCardProps {
 	onDelete: (id: number) => void;
 	onCopySettings: (video: Video) => void;
 	isListView?: boolean;
+	isSelected?: boolean;
+	onToggleSelect?: (id: number) => void;
 }
 
-export function VideoCard({ video, onDelete, onCopySettings, isListView }: VideoCardProps) {
+export function VideoCard({
+	video,
+	onDelete,
+	onCopySettings,
+	isListView,
+	isSelected,
+	onToggleSelect,
+}: VideoCardProps) {
 	const [copiedSettings, setCopiedSettings] = useState<number | null>(null);
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+	const selectMode = useVideosStore(state => state.selectMode);
 
 	const handleDelete = () => {
 		onDelete(video.id);
@@ -67,6 +79,13 @@ export function VideoCard({ video, onDelete, onCopySettings, isListView }: Video
 		return (
 			<div className="flex items-center justify-between py-2 px-3 bg-card hover:bg-accent/50 rounded-md">
 				<div className="flex items-center space-x-4 flex-grow">
+					{selectMode && onToggleSelect && (
+						<Checkbox
+							checked={isSelected}
+							onCheckedChange={() => onToggleSelect(video.id)}
+							className="mr-2"
+						/>
+					)}
 					<div className="flex-grow">
 						<p className="text-sm truncate max-w-[400px]">{video.prompt}</p>
 						<div className="flex items-center space-x-3 text-xs text-muted-foreground mt-0.5">
@@ -173,6 +192,15 @@ export function VideoCard({ video, onDelete, onCopySettings, isListView }: Video
 		<Card className="w-full overflow-hidden">
 			<CardContent className="p-0">
 				<div className="relative">
+					{selectMode && onToggleSelect && (
+						<div className="absolute top-2 left-2 z-10">
+							<Checkbox
+								checked={isSelected}
+								onCheckedChange={() => onToggleSelect(video.id)}
+								className="bg-background/80 backdrop-blur-sm"
+							/>
+						</div>
+					)}
 					{video.status === "processing" || video.status === "queued" ? (
 						<div className="bg-gray-200 w-full h-80">
 							<div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">

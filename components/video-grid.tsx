@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useVideosStore } from "@/store/video-store";
 import { Video } from "@/types";
 
 import { VideoCard } from "./video-card";
@@ -29,6 +30,8 @@ export function VideoGrid({
 	sortOption,
 	setSortOption,
 }: VideoGridProps) {
+	const { selectedVideoIds, toggleVideoSelection } = useVideosStore();
+
 	const getGridClass = () => {
 		switch (gridView) {
 			case "2x2":
@@ -89,6 +92,7 @@ export function VideoGrid({
 					setSortOption={setSortOption}
 					gridView={gridView}
 					setGridView={setGridView}
+					videos={sortedVideos}
 				/>
 			</div>
 
@@ -114,6 +118,8 @@ export function VideoGrid({
 								onDelete={onDelete}
 								onCopySettings={onCopySettings}
 								isListView={gridView === "list"}
+								isSelected={selectedVideoIds.includes(video.id)}
+								onToggleSelect={toggleVideoSelection}
 							/>
 						))}
 					</div>
