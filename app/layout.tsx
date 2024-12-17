@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 	description: "Generate videos using open source AI models",
 	openGraph: {
 		description: "Generate videos using open source AI models",
-		images: ["https://utfs.io/f/8a428f85-ae83-4ca7-9237-6f8b65411293-eun6ii.png"],
+		images: ["https://utfs.io/f/Vya1TVrP0e8NKmBcj8UWdzrGQoPbV9q68acFZiTDeIE2NJ5x"],
 		url: "https://openv.ai/",
 	},
 	twitter: {
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 		siteId: "",
 		creator: "@runpod",
 		creatorId: "",
-		images: ["https://utfs.io/f/8a428f85-ae83-4ca7-9237-6f8b65411293-eun6ii.png"],
+		images: ["https://utfs.io/f/Vya1TVrP0e8NKmBcj8UWdzrGQoPbV9q68acFZiTDeIE2NJ5x"],
 	},
 };
 
