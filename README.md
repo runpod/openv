@@ -8,7 +8,8 @@
 
 ## Documentation
 
-- [Technical Flow](docs/technical-flow.md) - System architecture and component interaction diagrams
+- [System Overview](docs/system-overview.md) - System architecture and component interaction
+  diagrams
 
 ## Development
 
