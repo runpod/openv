@@ -29,7 +29,8 @@ export function AcceptTermsForm() {
 				throw new Error(data.error || "Failed to accept terms");
 			}
 
-			// Navigate to my-videos after successful acceptance
+			// Revalidate the router and navigate
+			router.refresh(); // Force revalidation of all server components
 			router.push("/my-videos");
 		} catch (error) {
 			setIsSubmitting(false);
