@@ -2,11 +2,10 @@ import { auth } from "@clerk/nextjs/server";
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 
+import { MyVideosProvider } from "@/app/my-videos/provider";
 import AuthenticatedLayout from "@/components/layout/authenticated-layout";
 import prisma from "@/lib/prisma";
 import { checkTermsAcceptance } from "@/lib/terms";
-
-import { MyVideosProvider } from "./provider";
 
 // Add a delay function
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
