@@ -17,7 +17,7 @@ enum UserRole {
 model user {
   id                Int       @id @default(autoincrement())
   created_time      DateTime  @default(now())
-  email            String    @unique
+  email            String
   first_name       String?
   last_name        String?
   gender           String?

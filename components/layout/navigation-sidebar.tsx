@@ -96,9 +96,6 @@ export function NavigationSidebar() {
 									<span className="text-sm font-medium">
 										{user?.firstName} {user?.lastName}
 									</span>
-									<span className="text-xs text-gray-500">
-										{user?.emailAddresses[0]?.emailAddress}
-									</span>
 								</div>
 							</div>
 						</div>

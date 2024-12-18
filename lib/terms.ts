@@ -8,7 +8,7 @@ interface CheckTermsResponse {
 	error: string | null;
 }
 
-export async function checkTermsAcceptance(userId: string): Promise<CheckTermsResponse> {
+export const checkTermsAcceptance = async (userId: string): Promise<CheckTermsResponse> => {
 	try {
 		const acceptance = await prisma.terms_acceptance.findFirst({
 			where: {
@@ -31,12 +31,28 @@ export async function checkTermsAcceptance(userId: string): Promise<CheckTermsRe
 			error: "Failed to check terms acceptance",
 		};
 	}
-}
+};
 
 export async function acceptTerms(
 	userId: string
 ): Promise<{ success: boolean; error: string | null }> {
 	try {
+		// First check if terms are already accepted
+		const existing = await prisma.terms_acceptance.findFirst({
+			where: {
+				userId,
+				version: CURRENT_TOS_VERSION,
+			},
+		});
+
+		if (existing) {
+			return {
+				success: true,
+				error: null,
+			};
+		}
+
+		// If not already accepted, create new acceptance
 		await prisma.terms_acceptance.create({
 			data: {
 				userId,

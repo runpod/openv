@@ -1,8 +1,8 @@
 "server only";
 
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { UserRole } from "@prisma/client";
 
+import prisma from "@/lib/prisma";
 import { userCreateProps } from "@/utils/types";
 
 export const userCreate = async ({
@@ -12,37 +12,33 @@ export const userCreate = async ({
 	profile_image_url,
 	user_id,
 }: userCreateProps) => {
-	const cookieStore = await cookies();
-
-	const supabase = createServerClient(
-		process.env.SUPABASE_URL!,
-		process.env.SUPABASE_SERVICE_KEY!,
-		{
-			cookies: {
-				get(name: string) {
-					return cookieStore.get(name)?.value;
-				},
-			},
-		}
-	);
-
 	try {
-		const { data, error } = await supabase
-			.from("user")
-			.insert([
-				{
-					email,
-					first_name,
-					last_name,
-					profile_image_url,
-					user_id,
-				},
-			])
-			.select();
+		// First check if user exists
+		const existingUser = await prisma.user.findUnique({
+			where: {
+				user_id,
+			},
+		});
 
-		if (error?.code) return error;
-		return data;
+		if (existingUser) {
+			return existingUser;
+		}
+
+		// Create new user if they don't exist
+		const newUser = await prisma.user.create({
+			data: {
+				email,
+				first_name,
+				last_name,
+				profile_image_url,
+				user_id,
+				role: UserRole.restricted,
+			},
+		});
+
+		return newUser;
 	} catch (error: any) {
+		console.error("[userCreate] Error:", error);
 		throw new Error(error.message);
 	}
 };

@@ -11,12 +11,17 @@ import { MyVideosProvider } from "./provider";
 export default async function MyVideosLayout({ children }: { children: React.ReactNode }) {
 	const { userId } = await auth();
 	if (!userId) {
+		console.log("[MyVideosLayout] No userId, redirecting to sign-in");
 		redirect("/sign-in");
 	}
 
 	// Check terms acceptance
-	const { hasAccepted } = await checkTermsAcceptance(userId);
+	console.log("[MyVideosLayout] Checking terms acceptance for userId:", userId);
+	const { hasAccepted, error } = await checkTermsAcceptance(userId);
+	console.log("[MyVideosLayout] Terms check result:", { hasAccepted, error });
+
 	if (!hasAccepted) {
+		console.log("[MyVideosLayout] Terms not accepted, redirecting to terms/accept");
 		redirect("/terms/accept");
 	}
 
@@ -25,6 +30,7 @@ export default async function MyVideosLayout({ children }: { children: React.Rea
 	});
 
 	const hasAccess = user?.role === UserRole.user;
+	console.log("[MyVideosLayout] User access check:", { hasAccess, role: user?.role });
 
 	return (
 		<AuthenticatedLayout>

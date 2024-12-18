@@ -7,11 +7,11 @@ from Supabase managed with Prisma, authentication with Clerk and writing tests w
 
 Please make sure to AVOID the following mistakes:
 
-### Clerk
+### Don't use outdated Clerk code
 
 ```typescript
 // ❌ DON'T use these
-import { getAuth } from "@clerk/nextjs/server";
+import { getAuth } from "@clerk/nextjs";
 const { userId } = getAuth(request);
 
 // ✅ ALWAYS use these
