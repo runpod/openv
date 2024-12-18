@@ -8,6 +8,9 @@ import { checkTermsAcceptance } from "@/lib/terms";
 
 import { MyVideosProvider } from "./provider";
 
+// Add a delay function
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export default async function MyVideosLayout({ children }: { children: React.ReactNode }) {
 	const { userId } = await auth();
 	if (!userId) {
@@ -15,13 +18,30 @@ export default async function MyVideosLayout({ children }: { children: React.Rea
 		redirect("/sign-in");
 	}
 
-	// Check terms acceptance
+	// Check terms acceptance with retries
 	console.log("[MyVideosLayout] Checking terms acceptance for userId:", userId);
-	const { hasAccepted, error } = await checkTermsAcceptance(userId);
-	console.log("[MyVideosLayout] Terms check result:", { hasAccepted, error });
+	let attempts = 0;
+	let hasAccepted = false;
+	let error = null;
+
+	while (attempts < 3 && !hasAccepted) {
+		const result = await checkTermsAcceptance(userId);
+		hasAccepted = result.hasAccepted;
+		error = result.error;
+
+		if (!hasAccepted) {
+			console.log(`[MyVideosLayout] Terms not accepted, attempt ${attempts + 1} of 3`);
+			await delay(1000); // Wait 1 second between attempts
+			attempts++;
+		}
+	}
+
+	console.log("[MyVideosLayout] Final terms check result:", { hasAccepted, error, attempts });
 
 	if (!hasAccepted) {
-		console.log("[MyVideosLayout] Terms not accepted, redirecting to terms/accept");
+		console.log(
+			"[MyVideosLayout] Terms not accepted after retries, redirecting to terms/accept"
+		);
 		redirect("/terms/accept");
 	}
 

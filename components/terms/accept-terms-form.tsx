@@ -20,8 +20,10 @@ export function AcceptTermsForm() {
 
 		setIsSubmitting(true);
 		try {
+			// Accept terms
 			const response = await fetch("/api/terms/accept", {
 				method: "POST",
+				cache: "no-store",
 			});
 
 			if (!response.ok) {
@@ -29,9 +31,32 @@ export function AcceptTermsForm() {
 				throw new Error(data.error || "Failed to accept terms");
 			}
 
-			// Revalidate the router and navigate
-			router.refresh(); // Force revalidation of all server components
-			router.push("/my-videos");
+			// Wait for the terms to be accepted and verified
+			let attempts = 0;
+			let isVerified = false;
+
+			while (attempts < 3 && !isVerified) {
+				await new Promise(resolve => setTimeout(resolve, 1000));
+
+				const verifyResponse = await fetch("/api/terms/check", {
+					cache: "no-store",
+				});
+				const verifyData = await verifyResponse.json();
+
+				if (verifyData.hasAccepted) {
+					isVerified = true;
+					break;
+				}
+
+				attempts++;
+			}
+
+			if (!isVerified) {
+				throw new Error("Terms acceptance verification failed after multiple attempts");
+			}
+
+			// Force a hard redirect to clear all caches
+			window.location.href = "/my-videos";
 		} catch (error) {
 			setIsSubmitting(false);
 			toast({
