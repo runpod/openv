@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import AuthenticatedLayout from "@/components/layout/authenticated-layout";
 import prisma from "@/lib/prisma";
+import { checkTermsAcceptance } from "@/lib/terms";
 
 import { MyVideosProvider } from "./provider";
 
@@ -11,6 +12,12 @@ export default async function MyVideosLayout({ children }: { children: React.Rea
 	const { userId } = await auth();
 	if (!userId) {
 		redirect("/sign-in");
+	}
+
+	// Check terms acceptance
+	const { hasAccepted } = await checkTermsAcceptance(userId);
+	if (!hasAccepted) {
+		redirect("/terms/accept");
 	}
 
 	const user = await prisma.user.findUnique({

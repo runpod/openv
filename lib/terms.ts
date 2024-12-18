@@ -1,5 +1,3 @@
-import { NextResponse } from "next/server";
-
 import prisma from "@/lib/prisma";
 
 // Current version of ToS - update this when terms change
@@ -65,30 +63,4 @@ export async function getLatestTermsAcceptance(userId: string) {
 		where: { userId },
 		orderBy: { acceptedAt: "desc" },
 	});
-}
-
-// Helper function for middleware to check terms acceptance
-export async function checkTermsMiddleware(req: Request) {
-	try {
-		const response = await fetch(new URL("/api/terms/check", req.url), {
-			headers: req.headers,
-		});
-
-		if (!response.ok) {
-			console.error("Error checking terms acceptance");
-			return null;
-		}
-
-		const { hasAccepted } = await response.json();
-
-		if (!hasAccepted) {
-			// Use 303 See Other to force a new GET request and prevent loops
-			return NextResponse.redirect(new URL("/terms/accept", req.url), 303);
-		}
-
-		return;
-	} catch (error) {
-		console.error("Error in terms middleware:", error);
-		return null;
-	}
 }
