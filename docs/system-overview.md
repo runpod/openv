@@ -2,6 +2,103 @@
 
 This document outlines the technical flow of video generation in OpenV.
 
+## Core Architecture
+
+### Data Access Patterns
+
+The system follows a clear separation of concerns for data access:
+
+1. **Authentication (Clerk)**
+
+    - Source of truth for user identity
+    - Handles email verification and uniqueness
+    - Manages user sessions and tokens
+    - Webhooks notify system of user events
+
+2. **Database Access (Prisma)**
+
+    - Single pattern for all database operations
+    - No direct Supabase client usage
+    - Handles application-specific user data
+    - Manages terms acceptance and video metadata
+
+3. **Storage (UploadThing)**
+
+    - Handles video file uploads
+    - Secure, direct-to-cloud storage
+    - Integrated with Next.js API routes
+
+4. **AI Processing (RunPod)**
+    - Runs worker-mochi container
+    - Handles video generation
+    - Asynchronous webhook updates
+
+```mermaid
+flowchart TD
+    A[Client] --> B[Next.js App Router]
+    B --> C[Clerk Auth]
+    B --> D[Prisma]
+    B --> E[UploadThing]
+    B --> F[RunPod]
+    C -- webhook --> G[User Sync]
+    G --> D
+    F -- worker-mochi --> H[Video Generation]
+    H --> E
+```
+
+### Core Components
+
+1. **worker-mochi Container**
+
+    - Custom Docker container for video generation
+    - Runs on RunPod infrastructure
+    - Implements Mochi model for video creation
+    - Handles:
+        - Prompt processing
+        - Frame generation
+        - Video compilation
+        - Error handling
+
+2. **UploadThing Integration**
+    - Secure file uploads
+    - Direct-to-cloud storage
+    - Automatic file type validation
+    - Integrated with Next.js API routes
+
+### Core Flows
+
+1. **Authentication Flow**
+
+    ```mermaid
+    sequenceDiagram
+        participant U as User
+        participant C as Clerk
+        participant W as Webhook
+        participant DB as Database
+
+        U->>C: Sign up/Sign in
+        C->>W: User event
+        W->>DB: Create/Update user record
+        Note over DB: No email uniqueness<br/>User_id is unique identifier
+    ```
+
+2. **Terms Acceptance Flow**
+    ```mermaid
+    sequenceDiagram
+        participant U as User
+        participant P as Protected Route
+        participant DB as Database
+
+        U->>P: Access route
+        P->>DB: Check terms acceptance
+        alt Not Accepted
+            P->>U: Redirect to terms
+            U->>DB: Accept terms
+            Note over DB: Retry pattern for<br/>acceptance verification
+            U->>P: Return to route
+        end
+    ```
+
 ## Video Generation Flow
 
 The following diagram illustrates the interaction between different components of the system during
@@ -14,18 +111,22 @@ sequenceDiagram
     participant API as API
     participant DB as Database
     participant RP as RunPod
-    participant CS as Cloud Storage
+    participant WM as worker-mochi
+    participant UT as UploadThing
 
     U->>FE: Enter prompt and request video
     FE->>API: Submit video generation request
     API->>DB: Validate request (auth, limits) and store job
     API->>RP: Trigger video generation job
-    RP->>API: Return job ID
+    RP->>WM: Start worker-mochi container
+    WM->>API: Return job ID
     API->>FE: Send job info (job ID)
 
-    Note over RP: RunPod processes video asynchronously
+    Note over WM: worker-mochi processes<br/>video asynchronously
 
-    RP->>API: Webhook update (job status)
+    WM->>UT: Upload generated video
+    UT->>API: Return upload URL
+    WM->>API: Webhook update (job status + URL)
     API->>DB: Update job status
 
     FE->>API: Poll for job updates
@@ -36,9 +137,8 @@ sequenceDiagram
     U->>FE: Delete video request
     FE->>API: Delete video
     API->>DB: Mark video as deleted
-    API->>CS: Delete video file
-    CS->>API: Confirm deletion
-    API->>FE: Confirm deleted
+    API->>UT: Delete video file
+    UT->>API: Confirm deletion
 ```
 
 ### Components
@@ -369,3 +469,46 @@ user has accepted and when.
 
     Note: Make sure to use port 6543 for the pooled connection (DATABASE_URL) and port 5432 for the
     direct connection (DIRECT_URL).
+
+## Implementation Patterns
+
+### Database Access
+
+All database operations follow these patterns:
+
+1. **User Operations**
+
+    - Create/update through Clerk webhook
+    - User_id as primary identifier
+    - No email uniqueness constraint
+    - Application-specific data only
+
+2. **Terms Acceptance**
+
+    - Version-based acceptance tracking
+    - Retry pattern for verification
+    - Required for protected routes
+
+3. **Video Management**
+    - Metadata in database
+    - Files in storage
+    - Status tracking and updates
+
+### Error Handling
+
+Standard error patterns across the system:
+
+1. **Database Errors**
+
+    - Retry logic for transient failures
+    - Clear error messages
+    - Proper status codes
+
+2. **Auth Errors**
+
+    - Handled by Clerk middleware
+    - No redundant checks needed
+
+3. **Terms Acceptance Errors**
+    - Retry pattern for verification
+    - Clear user feedback
