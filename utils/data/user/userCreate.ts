@@ -1,9 +1,14 @@
 "server only";
 
-import { UserRole } from "@prisma/client";
+import { user, UserRole } from "@prisma/client";
 
 import prisma from "@/lib/prisma";
 import { userCreateProps } from "@/utils/types";
+
+type ErrorResponse = {
+	code: string;
+	message: string;
+};
 
 export const userCreate = async ({
 	email,
@@ -11,7 +16,7 @@ export const userCreate = async ({
 	last_name,
 	profile_image_url,
 	user_id,
-}: userCreateProps) => {
+}: userCreateProps): Promise<user | ErrorResponse> => {
 	try {
 		// First check if user exists
 		const existingUser = await prisma.user.findUnique({
@@ -39,6 +44,9 @@ export const userCreate = async ({
 		return newUser;
 	} catch (error: any) {
 		console.error("[userCreate] Error:", error);
-		throw new Error(error.message);
+		return {
+			code: error.code || "UNKNOWN_ERROR",
+			message: error.message || "An unknown error occurred",
+		};
 	}
 };

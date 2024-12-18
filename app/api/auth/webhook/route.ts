@@ -88,7 +88,7 @@ export async function POST(req: Request) {
 					user_id: payload?.data?.id,
 				});
 
-				// If result has a code property, it's an error
+				// If result is an error object
 				if ("code" in result) {
 					console.error("[Clerk Webhook] Error creating user:", result);
 					return NextResponse.json({
