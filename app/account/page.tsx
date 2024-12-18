@@ -1,85 +1,89 @@
-"use client";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { UserRole } from "@prisma/client";
+import { redirect } from "next/navigation";
 
-import { useUser } from "@clerk/nextjs";
-import { Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { VoucherForm } from "@/components/voucher-form";
+import prisma from "@/lib/prisma";
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import config from "@/config";
+export default async function AccountPage() {
+	const { userId } = await auth();
+	const user = await currentUser();
 
-export default function Account() {
-	let user = null;
-	/* eslint-disable react-hooks/rules-of-hooks */
-	if (config?.auth?.enabled) {
-		user = useUser();
+	if (!userId || !user) {
+		redirect("/sign-in");
 	}
-	const { theme, setTheme } = useTheme();
+
+	// Get user status from database
+	const dbUser = await prisma.user.findUnique({
+		where: { user_id: userId },
+	});
+
+	// Get voucher details if user has one
+	let voucherDetails = null;
+	if (dbUser?.voucher_used) {
+		voucherDetails = await prisma.voucher.findUnique({
+			where: { code: dbUser.voucher_used },
+		});
+	}
+
+	// Prepare status for the client component
+	const status = {
+		role: dbUser?.role || UserRole.restricted,
+		voucher_used: dbUser?.voucher_used || null,
+		voucher_used_at: dbUser?.voucher_used_at?.toISOString() || null,
+		voucher_details: voucherDetails
+			? {
+					code: voucherDetails.code,
+					expiresAt: voucherDetails.expiresAt.toISOString(),
+					isActive: voucherDetails.isActive,
+				}
+			: null,
+	};
 
 	return (
-		<div className="flex justify-start items-center flex-wrap px-4 pt-5 gap-4">
-			<div className="flex flex-col gap-3 mb-[5rem] w-full max-w-[700px]">
-				<h2 className="mt-10 scroll-m-20 border-b pb-2 w-full text-3xl font-semibold tracking-tight transition-colors first:mt-0">
-					My Profile
-				</h2>
-				<div className="flex w-full gap-3 mt-3">
-					<div className="flex flex-col gap-3 w-full">
-						<Label>First Name</Label>
-						<Input
-							disabled
-							defaultValue={user?.user?.firstName ? user?.user?.firstName : ""}
-						/>
-					</div>
-					<div className="flex flex-col gap-3 w-full">
-						<Label>Last Name</Label>
-						<Input
-							disabled
-							defaultValue={user?.user?.lastName ? user?.user?.lastName : ""}
-						/>
-					</div>
-				</div>
-				<div className="flex flex-col gap-3">
-					<div className="flex flex-col gap-3">
-						<Label>E-mail</Label>
-						<Input
-							disabled
-							defaultValue={user?.user?.emailAddresses?.[0]?.emailAddress!}
-						/>
-					</div>
-				</div>
-
-				<h2 className="mt-10 scroll-m-20 border-b pb-2 w-full text-3xl font-semibold tracking-tight transition-colors">
-					Appearance
-				</h2>
-				<div className="flex flex-col gap-3">
-					<Label>Theme</Label>
-					<Select value={theme} onValueChange={setTheme}>
-						<SelectTrigger className="w-[180px]">
-							<SelectValue placeholder="Select a theme" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="light">
-								<div className="flex items-center gap-2">
-									<Sun className="h-4 w-4" />
-									Light
+		<div className="container mx-auto p-6 space-y-8">
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+				<div className="w-full">
+					<Card>
+						<CardHeader>
+							<CardTitle>Account Information</CardTitle>
+							<CardDescription>Your personal information</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<p className="text-sm font-medium">Name</p>
+									<p className="text-sm text-muted-foreground">
+										{user.firstName} {user.lastName}
+									</p>
 								</div>
-							</SelectItem>
-							<SelectItem value="dark">
-								<div className="flex items-center gap-2">
-									<Moon className="h-4 w-4" />
-									Dark
+								<div>
+									<p className="text-sm font-medium">Email</p>
+									<p className="text-sm text-muted-foreground">
+										{user.emailAddresses[0]?.emailAddress}
+									</p>
 								</div>
-							</SelectItem>
-							<SelectItem value="system">System</SelectItem>
-						</SelectContent>
-					</Select>
+								<div>
+									<p className="text-sm font-medium">Account Created</p>
+									<p className="text-sm text-muted-foreground">
+										{user.createdAt
+											? new Date(user.createdAt).toLocaleDateString()
+											: "N/A"}
+									</p>
+								</div>
+								<div>
+									<p className="text-sm font-medium">Account Status</p>
+									<p className="text-sm text-muted-foreground">
+										{status.role === UserRole.user ? "Active" : "Restricted"}
+									</p>
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+				<div className="w-full">
+					<VoucherForm initialStatus={status} />
 				</div>
 			</div>
 		</div>

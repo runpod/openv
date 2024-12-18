@@ -1,8 +1,10 @@
+import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
-import { auth, requireAuth } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { validateVideoInput } from "@/lib/models/config";
+import { checkUserRole } from "@/lib/user";
 import { checkConcurrentJobs } from "@/utils/data/video/videoCheck";
 import { createVideo } from "@/utils/data/video/videoCreate";
 import { videoSubmit } from "@/utils/data/video/videoSubmit";
@@ -10,9 +12,16 @@ import { videoSubmit } from "@/utils/data/video/videoSubmit";
 export async function POST(request: Request) {
 	try {
 		// Get user ID from auth
-		const authResult = await auth();
-		requireAuth(authResult);
-		const { userId } = authResult;
+		const { userId } = await auth();
+		if (!userId) {
+			return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+		}
+
+		// Check user role
+		const roleCheck = await checkUserRole(userId, UserRole.user);
+		if ("error" in roleCheck) {
+			return NextResponse.json({ message: roleCheck.error }, { status: roleCheck.status });
+		}
 
 		// Check concurrent jobs
 		const { count, allowed, error } = await checkConcurrentJobs(userId);
@@ -79,9 +88,6 @@ export async function POST(request: Request) {
 		const { count: updatedCount } = await checkConcurrentJobs(userId);
 		return NextResponse.json({ ...createdVideo, count: updatedCount });
 	} catch (error: any) {
-		if (error.message === "Unauthorized") {
-			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-		}
 		console.error("Error in video generation:", error);
 		return NextResponse.json(
 			{ error: error?.message || "Internal server error" },

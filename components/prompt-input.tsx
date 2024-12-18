@@ -20,7 +20,7 @@ import { VideoSettings } from "@/types";
 interface PromptInputProps {
 	prompt: string;
 	setPrompt: (prompt: string) => void;
-	onGenerate: (prompt: string) => void;
+	onGenerate: () => void;
 	isGenerating: boolean;
 	processingCount: number;
 	videoSettings: VideoSettings;
@@ -30,6 +30,7 @@ interface PromptInputProps {
 	isRandomSeed: boolean;
 	setIsRandomSeed: (isRandom: boolean) => void;
 	queueItems: QueueItem[];
+	disabled?: boolean;
 }
 
 export function PromptInput({
@@ -45,6 +46,7 @@ export function PromptInput({
 	isRandomSeed,
 	setIsRandomSeed,
 	queueItems,
+	disabled,
 }: PromptInputProps) {
 	const [charCount, setCharCount] = useState(0);
 	const { limits, aspectRatios } = useModelSettings();
@@ -167,7 +169,8 @@ export function PromptInput({
 												prompt.trim() === "" ||
 												isGenerating ||
 												charCount > limits.prompt.maxLength ||
-												isQueueFull
+												isQueueFull ||
+												disabled
 											}
 										>
 											{isGenerating ? (
@@ -184,6 +187,11 @@ export function PromptInput({
 											You can only generate {systemConfig.concurrentJobs.max}{" "}
 											videos at the same time
 										</p>
+									</TooltipContent>
+								)}
+								{disabled && (
+									<TooltipContent>
+										<p>Add a voucher to enable video generation</p>
 									</TooltipContent>
 								)}
 							</Tooltip>

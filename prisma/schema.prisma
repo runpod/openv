@@ -8,16 +8,25 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum UserRole {
+  restricted
+  user
+  admin
+}
+
 model user {
-  id                Int      @id @default(autoincrement())
-  created_time      DateTime @default(now())
-  email             String   @unique
-  first_name        String?
-  last_name         String?
-  gender            String?
+  id                Int       @id @default(autoincrement())
+  created_time      DateTime  @default(now())
+  email            String    @unique
+  first_name       String?
+  last_name        String?
+  gender           String?
   profile_image_url String?
-  user_id           String   @unique
-  subscription      String?
+  user_id          String    @unique
+  subscription     String?
+  role             UserRole  @default(restricted)
+  voucher_used     String?   // Store the voucher code that was used
+  voucher_used_at  DateTime? // When the voucher was used
 }
 
 model payments {
@@ -108,4 +117,16 @@ model terms_acceptance {
 
   @@unique([userId, version])
   @@index([userId])
+}
+
+model voucher {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  expiresAt   DateTime // when the voucher expires
+  isActive    Boolean  @default(true)
+  createdBy   String   // admin's user_id who created it
+
+  @@index([code])
 }

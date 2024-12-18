@@ -1,14 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { AccessRestricted } from "@/components/access-restricted";
 import { PromptInput } from "@/components/prompt-input";
 import { Toaster } from "@/components/ui/toaster";
 import { VideoGrid } from "@/components/video-grid";
 import { useVideosStore } from "@/store/video-store";
 
+import { useMyVideos } from "./provider";
+
 export default function MyVideosPage() {
+	const { hasAccess } = useMyVideos();
 	const {
 		videos,
 		isGenerating,
@@ -54,7 +59,7 @@ export default function MyVideosPage() {
 	}, [initialize]);
 
 	const handleGenerate = async () => {
-		if (!prompt) return;
+		if (!prompt || !hasAccess) return;
 
 		setIsGenerating(true);
 
@@ -110,11 +115,20 @@ export default function MyVideosPage() {
 		}));
 
 	if (!mounted) {
-		return null;
+		return (
+			<div className="h-screen w-full flex items-center justify-center">
+				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+			</div>
+		);
 	}
 
 	return (
 		<div className="h-full min-h-screen w-full bg-background text-foreground mt-16">
+			{!hasAccess && (
+				<div className="max-w-screen-xl mx-auto px-4 mb-8">
+					<AccessRestricted />
+				</div>
+			)}
 			<div className="flex h-full">
 				<div className="flex-grow">
 					<div className="sticky top-0 z-10 bg-background p-4">
@@ -132,6 +146,7 @@ export default function MyVideosPage() {
 								isRandomSeed={isRandomSeed}
 								setIsRandomSeed={setIsRandomSeed}
 								queueItems={queueItems}
+								disabled={!hasAccess}
 							/>
 						</div>
 					</div>

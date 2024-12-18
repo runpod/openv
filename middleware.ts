@@ -8,7 +8,7 @@ const TOS_PROTECTED_PATHS = ["/my-videos"];
 
 export default process.env.NEXT_PUBLIC_TEST_MODE === "true"
 	? () => NextResponse.next()
-	: clerkMiddleware(async (_, req) => {
+	: clerkMiddleware(async (auth, req) => {
 			const pathname = new URL(req.url).pathname;
 
 			// Check terms acceptance for protected paths

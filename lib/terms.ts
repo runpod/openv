@@ -86,7 +86,7 @@ export async function checkTermsMiddleware(req: Request) {
 			return NextResponse.redirect(new URL("/terms/accept", req.url), 303);
 		}
 
-		return null;
+		return;
 	} catch (error) {
 		console.error("Error in terms middleware:", error);
 		return null;
