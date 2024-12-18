@@ -59,7 +59,7 @@ export function PromptInput({
 		if (prompt.trim() === "" || charCount > limits.prompt.maxLength) {
 			return;
 		}
-		onGenerate(prompt);
+		onGenerate();
 	};
 
 	const handleAspectRatioChange = (aspectRatio: "16:9" | "9:16" | "1:1") => {
