@@ -13,12 +13,10 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export default async function MyVideosLayout({ children }: { children: React.ReactNode }) {
 	const { userId } = await auth();
 	if (!userId) {
-		console.log("[MyVideosLayout] No userId, redirecting to sign-in");
 		redirect("/sign-in");
 	}
 
 	// Check terms acceptance with retries
-	console.log("[MyVideosLayout] Checking terms acceptance for userId:", userId);
 	let attempts = 0;
 	let hasAccepted = false;
 	let error = null;
@@ -29,18 +27,12 @@ export default async function MyVideosLayout({ children }: { children: React.Rea
 		error = result.error;
 
 		if (!hasAccepted) {
-			console.log(`[MyVideosLayout] Terms not accepted, attempt ${attempts + 1} of 3`);
 			await delay(1000); // Wait 1 second between attempts
 			attempts++;
 		}
 	}
 
-	console.log("[MyVideosLayout] Final terms check result:", { hasAccepted, error, attempts });
-
 	if (!hasAccepted) {
-		console.log(
-			"[MyVideosLayout] Terms not accepted after retries, redirecting to terms/accept"
-		);
 		redirect("/terms/accept");
 	}
 
@@ -49,7 +41,6 @@ export default async function MyVideosLayout({ children }: { children: React.Rea
 	});
 
 	const hasAccess = user?.role === UserRole.user;
-	console.log("[MyVideosLayout] User access check:", { hasAccess, role: user?.role });
 
 	return (
 		<AuthenticatedLayout>

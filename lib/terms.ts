@@ -10,7 +10,6 @@ interface CheckTermsResponse {
 
 export const checkTermsAcceptance = async (userId: string): Promise<CheckTermsResponse> => {
 	try {
-		console.log("[checkTermsAcceptance] Checking terms for userId:", userId);
 		const acceptance = await prisma.terms_acceptance.findFirst({
 			where: {
 				userId,
@@ -21,17 +20,13 @@ export const checkTermsAcceptance = async (userId: string): Promise<CheckTermsRe
 			},
 		});
 
-		console.log("[checkTermsAcceptance] Database query result:", acceptance);
-
 		const hasAccepted = !!acceptance;
-		console.log("[checkTermsAcceptance] Has accepted:", hasAccepted);
 
 		return {
 			hasAccepted,
 			error: null,
 		};
 	} catch (error) {
-		console.error("[checkTermsAcceptance] Error:", error);
 		return {
 			hasAccepted: false,
 			error: "Failed to check terms acceptance",
