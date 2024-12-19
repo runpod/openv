@@ -5,6 +5,7 @@ import {
 	Check,
 	Clock3,
 	Copy,
+	Dices,
 	Download,
 	Loader2,
 	MoreVertical,
@@ -96,6 +97,12 @@ export function VideoCard({
 								<span className="flex items-center">
 									<Clock3 className="h-3 w-3 mr-1" />
 									{duration}s
+								</span>
+							)}
+							{video.seed && (
+								<span className="flex items-center">
+									<Dices className="h-3 w-3 mr-1" />
+									{video.seed}
 								</span>
 							)}
 							{video.status === "processing" && (
@@ -281,6 +288,12 @@ export function VideoCard({
 							<span className="flex items-center">
 								<Clock3 className="h-3 w-3 mr-1" />
 								{duration}s
+							</span>
+						)}
+						{video.seed && (
+							<span className="flex items-center">
+								<Dices className="h-3 w-3 mr-1" />
+								{video.seed}
 							</span>
 						)}
 						{video.status === "processing" && (

@@ -17,6 +17,7 @@ interface VideoGridProps {
 	onCopySettings: (video: Video) => void;
 	sortOption: SortOption;
 	setSortOption: (option: SortOption) => void;
+	title?: string;
 }
 
 export function VideoGrid({
@@ -29,6 +30,7 @@ export function VideoGrid({
 	onCopySettings,
 	sortOption,
 	setSortOption,
+	title = "My Videos",
 }: VideoGridProps) {
 	const { selectedVideoIds, toggleVideoSelection } = useVideosStore();
 
@@ -84,7 +86,7 @@ export function VideoGrid({
 	return (
 		<div className="bg-[hsl(var(--section-background))] rounded-lg">
 			<div className="flex items-center gap-6 p-4">
-				<h3 className="text-lg font-semibold shrink-0">My Videos</h3>
+				<h3 className="text-lg font-semibold shrink-0">{title}</h3>
 				<VideoControls
 					searchQuery={searchQuery}
 					setSearchQuery={setSearchQuery}
