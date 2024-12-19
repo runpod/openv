@@ -57,16 +57,16 @@ export const inspirationData: InspirationItem[] = [
 		seed: 20700,
 		num_frames: 127,
 	},
-	// {
-	// 	video: "",
-	// 	prompt: "",
-	// 	seed: 0,
-	// 	num_frames: 127,
-	// },
-	// {
-	// 	video: "",
-	// 	prompt: "",
-	// 	seed: 0,
-	// 	num_frames: 127,
-	// },
+	{
+		video: "https://utfs.io/f/7979a9dc-7736-4771-9bcc-036d9cccca03-pg3f12.mp4",
+		prompt: "A quiet, post-apocalyptic forest with towering trees and a single robot foraging for supplies in the undergrowth.",
+		seed: 178816,
+		num_frames: 127,
+	},
+	{
+		video: "https://utfs.io/f/8cd845d4-9bf4-4742-8c0d-601876bcda86-pj1p4u.mp4",
+		prompt: "a dynamic shot of a cyclist racing down a mountain trail, dust kicking up. the camera follows closely, capturing the intensity and focus.",
+		seed: 334400,
+		num_frames: 127,
+	},
 ];
