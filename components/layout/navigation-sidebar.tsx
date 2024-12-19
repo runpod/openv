@@ -1,12 +1,13 @@
 "use client";
 
 import { SignOutButton, useUser } from "@clerk/nextjs";
-import { Folder, HomeIcon, LogOut, User } from "lucide-react";
+import { Bug, Folder, Github, HomeIcon, LogOut, MessageCircle, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/ui/logo";
+import { Separator } from "@/components/ui/separator";
 import {
 	Sidebar,
 	SidebarContent,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 
 // Navigation items
-const navigationItems = [
+const mainNavItems = [
 	{
 		title: "My Videos",
 		url: "/my-videos",
@@ -32,12 +33,33 @@ const navigationItems = [
 	},
 ];
 
+const externalNavItems = [
+	{
+		title: "Source",
+		url: "https://github.com/runpod/openv",
+		icon: Github,
+		external: true,
+	},
+	{
+		title: "Feedback",
+		url: "https://github.com/runpod/openv/discussions",
+		icon: MessageCircle,
+		external: true,
+	},
+	{
+		title: "Report Bug",
+		url: "https://github.com/runpod/openv/issues",
+		icon: Bug,
+		external: true,
+	},
+];
+
 export function NavigationSidebar() {
 	const pathname = usePathname();
 	const { user } = useUser();
 
 	return (
-		<Sidebar collapsible="icon">
+		<Sidebar>
 			<SidebarContent>
 				<div className="mb-6 mt-12 flex justify-center">
 					<Logo />
@@ -47,7 +69,7 @@ export function NavigationSidebar() {
 					<SidebarGroupLabel>Navigation</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							{navigationItems.map(item => (
+							{mainNavItems.map(item => (
 								<SidebarMenuItem key={item.title}>
 									<SidebarMenuButton
 										asChild
@@ -74,6 +96,26 @@ export function NavigationSidebar() {
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 							))}
+							<div className="px-3 py-2">
+								<Separator />
+							</div>
+							{externalNavItems.map(item => (
+								<SidebarMenuItem key={item.title}>
+									<SidebarMenuButton asChild>
+										<a
+											href={item.url}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="flex items-center gap-2"
+										>
+											<div className="border rounded-lg border-gray-400 dark:border-gray-700 p-1">
+												<item.icon className="h-3 w-3" />
+											</div>
+											<span>{item.title}</span>
+										</a>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							))}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
@@ -93,8 +135,8 @@ export function NavigationSidebar() {
 									</AvatarFallback>
 								</Avatar>
 								<div className="flex flex-col">
-									<span className="text-sm font-medium">
-										{user?.firstName} {user?.lastName}
+									<span className="text-xs font-medium text-muted-foreground">
+										{user?.emailAddresses?.[0]?.emailAddress}
 									</span>
 								</div>
 							</div>
