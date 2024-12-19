@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import { RunPodLogo } from "./ui/runpod-logo";
+
 function XIcon() {
 	return (
 		<svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
@@ -20,80 +22,50 @@ function BlueskyIcon() {
 
 export function Footer() {
 	return (
-		<footer className="border-t">
-			<div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
-				<div className="lg:grid lg:grid-cols-2">
-					<div className="border-b py-8 lg:order-last lg:border-b-0 lg:border-s lg:py-16 lg:ps-16">
-						<div className="mt-8 space-y-4 lg:mt-0">
-							<div>
-								<p className="mt-4 max-w-lg text-muted-foreground">
-									OpenV is an open source project that makes it easy to generate
-									videos using open source AI models like{" "}
-									<Link
-										href="https://genmo.ai/mochi"
-										target="_blank"
-										className="font-medium text-primary hover:underline"
-									>
-										Mochi 1 from Genmo
-									</Link>
-									.
-								</p>
-							</div>
-						</div>
+		<footer className="container mx-auto px-4 py-8 mt-20 border-t border-gray-800">
+			<div className="grid gap-8 md:grid-cols-3">
+				<div className="space-y-4">
+					<div className="flex gap-4">
+						<Link
+							href="https://twitter.com/runpod_io"
+							className="text-gray-400 hover:text-white"
+						>
+							<XIcon />
+						</Link>
+						<Link
+							href="https://bsky.app/profile/runpod.io"
+							className="text-gray-400 hover:text-white"
+						>
+							<BlueskyIcon />
+						</Link>
 					</div>
-
-					<div className="py-8 lg:py-16 lg:pe-16">
-						<div className="mt-8">
-							<div>
-								<p className="font-medium">Socials</p>
-
-								<ul className="mt-6 flex gap-4">
-									<li>
-										<Link
-											href="https://twitter.com/runpod_io"
-											target="_blank"
-											className="transition hover:opacity-75"
-											title="X (Twitter)"
-										>
-											<XIcon />
-										</Link>
-									</li>
-									<li>
-										<Link
-											href="https://bsky.app/profile/runpod.io"
-											target="_blank"
-											className="transition hover:opacity-75"
-											title="Bluesky"
-										>
-											<BlueskyIcon />
-										</Link>
-									</li>
-								</ul>
-							</div>
-						</div>
-
-						<div className="mt-8 border-t pt-8">
-							<ul className="flex flex-wrap gap-4 text-xs">
-								<li>
-									<Link href="/terms" className="transition hover:opacity-75">
-										Terms & Conditions
-									</Link>
-								</li>
-							</ul>
-
-							<p className="mt-8 text-xs text-muted-foreground">
-								&copy; {new Date().getFullYear()} RunPod, Inc. Provided with ❤️ as{" "}
-								<Link
-									href="https://github.com/runpod/openv"
-									target="_blank"
-									className="font-medium text-primary hover:underline"
-								>
-									open source
-								</Link>
-								.
-							</p>
-						</div>
-					</div>
+				</div>
+				<div className="space-y-2">
+					<h4 className="text-sm font-medium text-white">Links</h4>
+					<ul className="space-y-2">
+						<li>
+							<Link
+								href="/terms"
+								className="text-sm text-blue-400 hover:text-blue-300 underline underline-offset-2"
+							>
+								Terms & Conditions
+							</Link>
+						</li>
+						<li>
+							<Link
+								href="https://github.com/runpod/openv"
+								className="text-sm text-blue-400 hover:text-blue-300 underline underline-offset-2"
+							>
+								Source Code on GitHub
+							</Link>
+						</li>
+					</ul>
+				</div>
+				<div className="text-sm text-gray-400 flex items-center space-x-2">
+					<span>© {new Date().getFullYear()} by</span>
+					<Link href="https://www.runpod.io" passHref className="text-white">
+						<RunPodLogo className="h-8 w-auto fill-current" />
+					</Link>
 				</div>
 			</div>
 		</footer>
