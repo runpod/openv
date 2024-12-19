@@ -120,6 +120,7 @@ export function VideoGrid({
 								isListView={gridView === "list"}
 								isSelected={selectedVideoIds.includes(video.id)}
 								onToggleSelect={toggleVideoSelection}
+								gridView={gridView}
 							/>
 						))}
 					</div>

@@ -31,6 +31,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getSeconds } from "@/lib/time";
+import { cn } from "@/lib/utils";
 import { useVideosStore } from "@/store/video-store";
 import { Video } from "@/types";
 
@@ -41,6 +42,7 @@ interface VideoCardProps {
 	isListView?: boolean;
 	isSelected?: boolean;
 	onToggleSelect?: (id: number) => void;
+	gridView: "2x2" | "3x3" | "list";
 }
 
 export function VideoCard({
@@ -50,6 +52,7 @@ export function VideoCard({
 	isListView,
 	isSelected,
 	onToggleSelect,
+	gridView,
 }: VideoCardProps) {
 	const [copiedSettings, setCopiedSettings] = useState<number | null>(null);
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -202,13 +205,23 @@ export function VideoCard({
 						</div>
 					)}
 					{video.status === "processing" || video.status === "queued" ? (
-						<div className="bg-gray-200 w-full h-80">
+						<div
+							className={cn(
+								"bg-gray-200 w-full",
+								gridView === "3x3" ? "h-80" : "h-auto aspect-video"
+							)}
+						>
 							<div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
 								<div className="animate-spin rounded-full border-t-2 border-b-2 border-white h-16 w-16"></div>
 							</div>
 						</div>
 					) : !hasValidUrl ? (
-						<div className="bg-gray-200 w-full h-80 flex items-center justify-center">
+						<div
+							className={cn(
+								"bg-gray-200 w-full flex items-center justify-center",
+								gridView === "3x3" ? "h-80" : "h-auto aspect-video"
+							)}
+						>
 							<div className="flex flex-col items-center gap-2 text-destructive">
 								<AlertCircle className="h-16 w-16" />
 								<Badge variant="destructive" className="text-sm">
@@ -217,7 +230,14 @@ export function VideoCard({
 							</div>
 						</div>
 					) : (
-						<video src={video.url} controls className="w-full h-80 object-cover">
+						<video
+							src={video.url}
+							controls
+							className={cn(
+								"w-full object-cover",
+								gridView === "3x3" ? "h-80" : "h-auto"
+							)}
+						>
 							Your browser does not support the video tag.
 						</video>
 					)}
