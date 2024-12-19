@@ -32,26 +32,17 @@ export default function HeroSection() {
 			<div className="flex flex-col items-center">
 				<span className="relative mt-10 p-4">
 					<div className="relative">
-						{userId ? (
-							<Link href="/my-videos">
-								<ShineBorder
-									color={["#fff", "#a855f7", "#fff", "#a855f7"]}
-									borderWidth={10}
-									className="rounded-xl"
-								>
-									<Button
-										size={null}
-										className="px-8 py-6 font-semibold text-4xl"
-									>
-										Try for free*
-									</Button>
-								</ShineBorder>
-							</Link>
-						) : (
-							<p className="text-6xl">
-								We are still cooking, use for free* very soon!
-							</p>
-						)}
+						<Link href="/my-videos">
+							<ShineBorder
+								color={["#fff", "#a855f7", "#fff", "#a855f7"]}
+								borderWidth={10}
+								className="rounded-xl"
+							>
+								<Button size={null} className="px-8 py-6 font-semibold text-4xl">
+									Try for free*
+								</Button>
+							</ShineBorder>
+						</Link>
 					</div>
 				</span>
 				<p className="text-sm text-muted-foreground mt-4">
