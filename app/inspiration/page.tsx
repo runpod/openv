@@ -10,8 +10,8 @@ export default function InspirationPage() {
 		useVideosStore();
 
 	// Convert inspiration data to Video format
-	const videos: Video[] = inspirationData.map(item => ({
-		id: 0,
+	const videos: Video[] = inspirationData.map((item, index) => ({
+		id: index + 1,
 		jobId: "inspiration",
 		userId: "inspiration",
 		prompt: item.prompt,
