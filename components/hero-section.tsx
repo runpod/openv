@@ -1,20 +1,11 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import ShineBorder from "@/components/ui/shine-border";
-import config from "@/config";
 
 export default function HeroSection() {
-	let userId = null;
-	/* eslint-disable react-hooks/rules-of-hooks */
-	if (config?.auth?.enabled) {
-		const { userId: authUserId } = useAuth();
-		userId = authUserId;
-	}
-
 	return (
 		<section
 			className="flex flex-col items-center justify-center leading-6 mt-[3rem] px-4"
