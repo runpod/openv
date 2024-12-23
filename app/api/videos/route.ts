@@ -1,13 +1,17 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { auth, requireAuth } from "@/lib/auth";
+import { getMonthlyQuota } from "@/lib/monthly-limit";
 import prisma from "@/lib/prisma";
 import { handleVideoRetry } from "@/utils/data/video/videoRetry";
 
 export async function GET(request: Request) {
 	try {
 		const authResult = await auth();
-		requireAuth(authResult);
+		if (!authResult?.userId) {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
 		const { userId } = authResult;
 
 		// Parse the updatedSince query parameter
@@ -33,18 +37,17 @@ export async function GET(request: Request) {
 			}
 		}
 
+		const where: Prisma.videoWhereInput = {
+			userId,
+			...(updatedSinceDate && {
+				updatedAt: {
+					gt: updatedSinceDate,
+				},
+			}),
+		};
+
 		const videos = await prisma.video.findMany({
-			where: {
-				userId,
-				...(updatedSinceDate && {
-					updatedAt: {
-						gt: updatedSinceDate,
-					},
-				}),
-			},
-			orderBy: {
-				createdAt: "desc",
-			},
+			where,
 			select: {
 				id: true,
 				jobId: true,
@@ -65,20 +68,29 @@ export async function GET(request: Request) {
 				steps: true,
 				cfg: true,
 			},
+			orderBy: {
+				createdAt: "desc",
+			},
 		});
+
+		// Get current monthly quota
+		const monthlyQuota = await getMonthlyQuota(userId);
 
 		// Check for failed videos that need retry
 		for (const video of videos) {
 			await handleVideoRetry(video);
 		}
 
-		return NextResponse.json(videos);
+		return NextResponse.json({
+			videos,
+			monthlyQuota,
+		});
 	} catch (error: any) {
-		if (error.message === "Unauthorized") {
-			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-		}
-		console.error("Error in GET /api/videos:", error);
-		return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+		console.error("Error fetching videos:", error);
+		return NextResponse.json(
+			{ error: error?.message || "Internal server error" },
+			{ status: error?.status || 500 }
+		);
 	}
 }
 
@@ -107,7 +119,7 @@ export async function DELETE(request: Request) {
 				jobId: {
 					in: jobIds,
 				},
-				userId,
+				userId: userId as string, // Type assertion since we know userId is not null after requireAuth
 			},
 		});
 

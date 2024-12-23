@@ -54,7 +54,7 @@ export const useVideosStore = create<VideosState>()(
 			searchQuery: "",
 			sortOption: "newest",
 			isRandomSeed: true,
-			seed: Math.floor(Math.random() * 1000000),
+			seed: Math.floor(Math.random() * 2147483647),
 			videoSettings: defaultSettings,
 
 			setVideos: videos => set({ videos }),

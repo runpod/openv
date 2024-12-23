@@ -38,13 +38,32 @@ export default async function MyVideosLayout({ children }: { children: React.Rea
 
 	const user = await prisma.user.findUnique({
 		where: { user_id: userId },
+		select: {
+			role: true,
+			monthlyUsage: true,
+		},
 	});
 
 	const hasAccess = user?.role === UserRole.user;
 
+	// Get monthly limit from env
+	const monthlyLimitSeconds = parseInt(process.env.MONTHLY_LIMIT_SECONDS || "60", 10);
+	const currentUsage = user?.monthlyUsage || 0;
+	const remainingSeconds = monthlyLimitSeconds - currentUsage;
+
+	const monthlyQuota = hasAccess
+		? {
+				remainingSeconds,
+				currentUsage,
+				limitSeconds: monthlyLimitSeconds,
+			}
+		: undefined;
+
 	return (
 		<AuthenticatedLayout>
-			<MyVideosProvider hasAccess={hasAccess}>{children}</MyVideosProvider>
+			<MyVideosProvider hasAccess={hasAccess} monthlyQuota={monthlyQuota}>
+				{children}
+			</MyVideosProvider>
 		</AuthenticatedLayout>
 	);
 }

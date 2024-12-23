@@ -27,6 +27,8 @@ model user {
   role             UserRole  @default(restricted)
   voucher_used     String?   // Store the voucher code that was used
   voucher_used_at  DateTime? // When the voucher was used
+  monthlyUsage     Float     @default(0) // Monthly usage in seconds with decimals
+  monthlyUsageLastReset DateTime @default(now()) // Last time the monthly usage was reset
 }
 
 model payments {

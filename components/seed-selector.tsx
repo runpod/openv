@@ -24,21 +24,36 @@ export function SeedSelector({ seed, isRandomSeed, onChange, min, max }: SeedSel
 
 	const handleSeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newSeed = parseInt(e.target.value);
+		console.log("SeedSelector input change:", JSON.stringify({ newSeed, min, max }, null, 2));
 		if (isNaN(newSeed)) {
 			setLocalSeed(min);
 		} else {
-			setLocalSeed(Math.max(min, Math.min(max, newSeed)));
+			const constrainedSeed = Math.max(min, Math.min(max, newSeed));
+			console.log(
+				"SeedSelector constrained value:",
+				JSON.stringify({ constrainedSeed, original: newSeed }, null, 2)
+			);
+			setLocalSeed(constrainedSeed);
 		}
 	};
 
 	const handleRandomToggle = (checked: boolean) => {
 		setLocalIsRandom(checked);
 		if (checked) {
-			setLocalSeed(Math.floor(Math.random() * (max - min + 1)) + min);
+			const randomSeed = Math.floor(Math.random() * (max - min + 1)) + min;
+			console.log(
+				"SeedSelector random seed:",
+				JSON.stringify({ randomSeed, min, max }, null, 2)
+			);
+			setLocalSeed(randomSeed);
 		}
 	};
 
 	const handleApply = () => {
+		console.log(
+			"SeedSelector applying:",
+			JSON.stringify({ localSeed, localIsRandom }, null, 2)
+		);
 		onChange(localSeed, localIsRandom);
 		setOpen(false);
 	};

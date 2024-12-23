@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AspectRatioSelector } from "@/components/aspect-ratio-selector";
 import { CfgSelector } from "@/components/cfg-selector";
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useModelSettings } from "@/hooks/use-model-settings";
-import { systemConfig } from "@/lib/models/config";
+import { getModelConfig, systemConfig } from "@/lib/models/config";
 import { VideoSettings } from "@/types";
 
 interface PromptInputProps {
@@ -31,6 +31,17 @@ interface PromptInputProps {
 	setIsRandomSeed: (isRandom: boolean) => void;
 	queueItems: QueueItem[];
 	disabled?: boolean;
+	monthlyQuota?: {
+		remainingSeconds: number;
+		currentUsage: number;
+		limitSeconds: number;
+	};
+}
+
+interface ButtonState {
+	isDisabled: boolean;
+	reason: string;
+	suggestedFrames: number | null;
 }
 
 export function PromptInput({
@@ -38,7 +49,6 @@ export function PromptInput({
 	setPrompt,
 	onGenerate,
 	isGenerating,
-	processingCount,
 	videoSettings,
 	setVideoSettings,
 	seed,
@@ -47,6 +57,7 @@ export function PromptInput({
 	setIsRandomSeed,
 	queueItems,
 	disabled,
+	monthlyQuota,
 }: PromptInputProps) {
 	const [charCount, setCharCount] = useState(0);
 	const { limits, aspectRatios } = useModelSettings();
@@ -79,9 +90,17 @@ export function PromptInput({
 	};
 
 	const handleSeedChange = (newSeed: number, isRandom: boolean) => {
+		console.log(
+			"Seed change:",
+			JSON.stringify({ newSeed, isRandom, currentSeed: seed }, null, 2)
+		);
 		setSeed(newSeed);
 		setIsRandomSeed(isRandom);
 		setVideoSettings({ ...videoSettings, seed: newSeed });
+		console.log(
+			"After seed change:",
+			JSON.stringify({ newSeed, videoSettings: { ...videoSettings, seed: newSeed } }, null, 2)
+		);
 	};
 
 	const handleNegativePromptChange = (negativePrompt: string) => {
@@ -92,6 +111,204 @@ export function PromptInput({
 
 	const queuedCount = queueItems.filter(item => item.status === "queued").length;
 	const isQueueFull = queuedCount >= systemConfig.concurrentJobs.max;
+
+	// Calculate estimated duration based on frames and fps from model config
+	const modelConfig = getModelConfig("mochi-1");
+	const fps = modelConfig.fps;
+	const estimatedDuration = videoSettings.numFrames / fps;
+
+	// Check if we have enough quota for even the minimum video length
+	const hasNoQuotaLeft =
+		monthlyQuota && monthlyQuota.remainingSeconds < modelConfig.minimumQuotaSeconds;
+
+	// Get all possible frame counts and their durations
+	const possibleLengths = useMemo(() => {
+		const lengths = [];
+		for (let i = limits.numFrames.min; i <= limits.numFrames.max; i += 6) {
+			lengths.push({
+				frames: i,
+				duration: i / fps,
+			});
+		}
+		return lengths;
+	}, [fps, limits.numFrames.min, limits.numFrames.max]);
+
+	// Check if current duration would exceed quota, considering the next higher length
+	const wouldExceedQuota = useMemo(() => {
+		if (!monthlyQuota) return false;
+
+		// Find the length that's just above the remaining quota
+		const nextPossibleLength = possibleLengths.find(
+			length => length.duration > monthlyQuota.remainingSeconds
+		);
+
+		// Find the length that's just below the remaining quota
+		const currentPossibleLength = [...possibleLengths]
+			.reverse()
+			.find(length => length.duration <= monthlyQuota.remainingSeconds);
+
+		// If we can't find a possible length, don't allow generation
+		if (!currentPossibleLength) return true;
+
+		// If the current video length is less than or equal to the current possible length,
+		// or if it's the next possible length, allow generation
+		return !(
+			estimatedDuration <= currentPossibleLength.duration ||
+			(nextPossibleLength && estimatedDuration === nextPossibleLength.duration)
+		);
+	}, [monthlyQuota, estimatedDuration, possibleLengths]);
+
+	// Debug log for quota calculations
+	useEffect(() => {
+		console.log(
+			"Quota Calculations:",
+			JSON.stringify(
+				{
+					currentFrames: videoSettings.numFrames,
+					estimatedDuration: estimatedDuration.toFixed(2),
+					remainingSeconds: monthlyQuota?.remainingSeconds.toFixed(2),
+					wouldExceedQuota,
+					possibleLengths: possibleLengths.map(l => ({
+						frames: l.frames,
+						duration: l.duration.toFixed(2),
+					})),
+				},
+				null,
+				2
+			)
+		);
+	}, [
+		estimatedDuration,
+		monthlyQuota?.remainingSeconds,
+		wouldExceedQuota,
+		possibleLengths,
+		videoSettings.numFrames,
+	]);
+
+	// Evaluate all conditions that could disable the button
+	const buttonState = useMemo<ButtonState>(() => {
+		const state = {
+			isDisabled: false,
+			reason: "",
+			suggestedFrames: null as number | null,
+		};
+
+		if (prompt.trim() === "") {
+			state.isDisabled = true;
+			state.reason = "Please enter a prompt";
+		} else if (isGenerating) {
+			state.isDisabled = true;
+			state.reason = "Generating...";
+		} else if (charCount > limits.prompt.maxLength) {
+			state.isDisabled = true;
+			state.reason = "Prompt is too long";
+		} else if (isQueueFull) {
+			state.isDisabled = true;
+			state.reason = `You can only generate ${systemConfig.concurrentJobs.max} videos at the same time`;
+		} else if (disabled) {
+			state.isDisabled = true;
+			state.reason = "Add a voucher to enable video generation";
+		} else if (hasNoQuotaLeft) {
+			state.isDisabled = true;
+			state.reason = "You have reached your monthly video generation limit";
+		} else if (wouldExceedQuota) {
+			state.isDisabled = true;
+			state.reason = `Video too long. You have ${monthlyQuota?.remainingSeconds.toFixed(2)}s remaining`;
+		}
+
+		return state;
+	}, [
+		prompt,
+		isGenerating,
+		charCount,
+		limits.prompt.maxLength,
+		isQueueFull,
+		disabled,
+		hasNoQuotaLeft,
+		wouldExceedQuota,
+		monthlyQuota?.remainingSeconds,
+		fps,
+	]);
+
+	// Auto-adjust video length if a better length is suggested
+	useEffect(() => {
+		if (buttonState.suggestedFrames && !buttonState.isDisabled) {
+			setVideoSettings({
+				...videoSettings,
+				numFrames: buttonState.suggestedFrames,
+			});
+		}
+	}, [buttonState.suggestedFrames, buttonState.isDisabled, setVideoSettings, videoSettings]);
+
+	// Debug logs
+	useEffect(() => {
+		console.log(
+			"Button State:",
+			JSON.stringify(
+				{
+					numFrames: videoSettings.numFrames,
+					fps,
+					estimatedDuration: estimatedDuration.toFixed(2),
+					remainingSeconds: monthlyQuota?.remainingSeconds.toFixed(2),
+					wouldExceedQuota,
+					otherConditions: {
+						emptyPrompt: prompt.trim() === "",
+						isGenerating,
+						promptTooLong: charCount > limits.prompt.maxLength,
+						isQueueFull,
+						disabled,
+						hasNoQuotaLeft,
+					},
+					buttonState: {
+						isDisabled: buttonState.isDisabled,
+						reason: buttonState.reason,
+					},
+				},
+				null,
+				2
+			)
+		);
+	}, [
+		videoSettings.numFrames,
+		monthlyQuota?.remainingSeconds,
+		estimatedDuration,
+		wouldExceedQuota,
+		prompt,
+		isGenerating,
+		charCount,
+		isQueueFull,
+		disabled,
+		hasNoQuotaLeft,
+		buttonState,
+		fps,
+		limits.prompt.maxLength,
+	]);
+
+	const maxInt4 = 2147483647;
+
+	// Validate seed values on mount
+	useEffect(() => {
+		if (seed > maxInt4 || videoSettings.seed > maxInt4) {
+			console.log(
+				"Fixing invalid seed values:",
+				JSON.stringify(
+					{
+						oldSeed: seed,
+						oldVideoSettingsSeed: videoSettings.seed,
+						maxInt4,
+					},
+					null,
+					2
+				)
+			);
+			const newSeed = Math.min(maxInt4, seed);
+			setSeed(newSeed);
+			setVideoSettings({
+				...videoSettings,
+				seed: newSeed,
+			});
+		}
+	}, []); // Only run on mount
 
 	return (
 		<div className="relative bg-secondary p-2 rounded-lg shadow-md">
@@ -143,8 +360,8 @@ export function PromptInput({
 							seed={seed}
 							isRandomSeed={isRandomSeed}
 							onChange={handleSeedChange}
-							min={limits.seed.min}
-							max={limits.seed.max}
+							min={0}
+							max={2147483647}
 						/>
 						<NegativePromptSelector
 							negativePrompt={videoSettings.negativePrompt}
@@ -165,13 +382,7 @@ export function PromptInput({
 											variant="default"
 											className="text-primary-foreground bg-primary hover:bg-primary/90 w-[100px] flex-1"
 											onClick={handleGenerate}
-											disabled={
-												prompt.trim() === "" ||
-												isGenerating ||
-												charCount > limits.prompt.maxLength ||
-												isQueueFull ||
-												disabled
-											}
+											disabled={buttonState.isDisabled}
 										>
 											{isGenerating ? (
 												<Loader2 className="h-4 w-4 animate-spin" />
@@ -181,17 +392,9 @@ export function PromptInput({
 										</Button>
 									</div>
 								</TooltipTrigger>
-								{isQueueFull && (
+								{buttonState.isDisabled && buttonState.reason && (
 									<TooltipContent>
-										<p>
-											You can only generate {systemConfig.concurrentJobs.max}{" "}
-											videos at the same time
-										</p>
-									</TooltipContent>
-								)}
-								{disabled && (
-									<TooltipContent>
-										<p>Add a voucher to enable video generation</p>
+										<p>{buttonState.reason}</p>
 									</TooltipContent>
 								)}
 							</Tooltip>

@@ -38,9 +38,27 @@ interface VideosState {
 	deleteVideo: (id: number) => Promise<void>;
 	deleteSelectedVideos: () => Promise<void>;
 	setVideoSettings: (settings: VideoSettings) => void;
-	fetchVideos: () => Promise<void>;
-	fetchUpdatedVideos: () => Promise<void>;
-	initialize: () => Promise<void>;
+	fetchVideos: () => Promise<{
+		monthlyQuota?: {
+			remainingSeconds: number;
+			currentUsage: number;
+			limitSeconds: number;
+		};
+	}>;
+	fetchUpdatedVideos: () => Promise<{
+		monthlyQuota?: {
+			remainingSeconds: number;
+			currentUsage: number;
+			limitSeconds: number;
+		};
+	}>;
+	initialize: () => Promise<{
+		monthlyQuota?: {
+			remainingSeconds: number;
+			currentUsage: number;
+			limitSeconds: number;
+		};
+	}>;
 }
 
 const defaultSettings: VideoSettings = {
@@ -65,8 +83,11 @@ export const useVideosStore = create<VideosState>()(
 			searchQuery: "",
 			sortOption: "newest",
 			isRandomSeed: true,
-			seed: Math.floor(Math.random() * 1000000),
-			videoSettings: defaultSettings,
+			seed: Math.min(2147483647, Math.floor(Math.random() * 2147483647)),
+			videoSettings: {
+				...defaultSettings,
+				seed: Math.min(2147483647, defaultSettings.seed),
+			},
 			currentTimestamp: null,
 
 			setVideos: videos => set({ videos }),
@@ -76,7 +97,16 @@ export const useVideosStore = create<VideosState>()(
 			setSearchQuery: query => set({ searchQuery: query }),
 			setSortOption: option => set({ sortOption: option }),
 			setIsRandomSeed: isRandom => set({ isRandomSeed: isRandom }),
-			setSeed: seed => set({ seed }),
+			setSeed: seed =>
+				set({
+					seed: Math.min(2147483647, seed),
+					videoSettings: get().videoSettings
+						? {
+								...get().videoSettings,
+								seed: Math.min(2147483647, seed),
+							}
+						: defaultSettings,
+				}),
 
 			toggleVideoSelection: (id: number) =>
 				set(state => ({
@@ -135,7 +165,7 @@ export const useVideosStore = create<VideosState>()(
 						...state.videos,
 						{
 							...video,
-							frames: video.frames || defaultSettings.numFrames,
+							frames: video.frames || state.videoSettings.numFrames,
 							seed: get().seed,
 							enhancePrompt: false,
 						},
@@ -218,7 +248,15 @@ export const useVideosStore = create<VideosState>()(
 				}
 			},
 
-			setVideoSettings: settings => set({ videoSettings: settings }),
+			setVideoSettings: settings =>
+				set(state => ({
+					videoSettings: {
+						...defaultSettings,
+						...state.videoSettings,
+						...settings,
+						seed: Math.min(2147483647, settings.seed),
+					},
+				})),
 
 			fetchVideos: async () => {
 				try {
@@ -226,7 +264,8 @@ export const useVideosStore = create<VideosState>()(
 					if (!response.ok) {
 						throw new Error("Failed to fetch videos");
 					}
-					const videos = await response.json();
+					const data = await response.json();
+					const { videos, monthlyQuota } = data;
 
 					const newestVideo = videos.reduce((newest: Video | null, current: Video) => {
 						return !newest ||
@@ -239,15 +278,19 @@ export const useVideosStore = create<VideosState>()(
 						videos,
 						currentTimestamp: newestVideo?.updatedAt || null,
 					});
+
+					return { monthlyQuota };
 				} catch (error) {
 					console.error("Error fetching videos:", error);
+					return {};
 				}
 			},
 
 			fetchUpdatedVideos: async () => {
 				const state = get();
 				if (!state.currentTimestamp) {
-					return await state.fetchVideos();
+					await state.fetchVideos();
+					return {};
 				}
 
 				try {
@@ -258,12 +301,14 @@ export const useVideosStore = create<VideosState>()(
 					if (!response.ok) {
 						if (response.status === 400) {
 							console.warn("Invalid timestamp parameter, fetching all videos");
-							return await state.fetchVideos();
+							await state.fetchVideos();
+							return {};
 						}
 						throw new Error(`Failed to fetch updated videos: ${response.statusText}`);
 					}
 
-					const updatedVideos = await response.json();
+					const data = await response.json();
+					const { videos: updatedVideos, monthlyQuota } = data;
 
 					set(state => {
 						const videoMap = new Map(state.videos.map(v => [v.id, v]));
@@ -281,14 +326,18 @@ export const useVideosStore = create<VideosState>()(
 							currentTimestamp: newestTimestamp,
 						};
 					});
+
+					return { monthlyQuota };
 				} catch (error) {
 					console.error("Error fetching updated videos:", error);
+					return {};
 				}
 			},
 
 			initialize: async () => {
 				const { fetchVideos } = get();
-				await fetchVideos();
+				const { monthlyQuota } = await fetchVideos();
+				return { monthlyQuota };
 			},
 		}),
 		{
@@ -299,8 +348,30 @@ export const useVideosStore = create<VideosState>()(
 				sortOption: state.sortOption,
 				isRandomSeed: state.isRandomSeed,
 				seed: state.seed,
-				videoSettings: state.videoSettings,
+				videoSettings: {
+					...defaultSettings,
+					...state.videoSettings,
+					seed: Math.min(2147483647, state.videoSettings.seed),
+				},
 			}),
+			migrate: (persistedState: any) => {
+				const maxInt4 = 2147483647;
+				return {
+					...persistedState,
+					seed: Math.min(
+						maxInt4,
+						persistedState.seed || Math.floor(Math.random() * maxInt4)
+					),
+					videoSettings: {
+						...defaultSettings,
+						...(persistedState.videoSettings || {}),
+						seed: Math.min(
+							maxInt4,
+							persistedState.videoSettings?.seed || defaultSettings.seed
+						),
+					},
+				};
+			},
 		}
 	)
 );

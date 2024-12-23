@@ -21,6 +21,7 @@ The system follows a clear separation of concerns for data access:
     - No direct Supabase client usage
     - Handles application-specific user data
     - Manages terms acceptance and video metadata
+    - Tracks monthly video generation usage
 
 3. **Storage (UploadThing)**
 
@@ -83,6 +84,7 @@ flowchart TD
     ```
 
 2. **Terms Acceptance Flow**
+
     ```mermaid
     sequenceDiagram
         participant U as User
@@ -512,3 +514,57 @@ Standard error patterns across the system:
 3. **Terms Acceptance Errors**
     - Retry pattern for verification
     - Clear user feedback
+
+### Monthly Usage Limits
+
+The system enforces monthly video generation limits with configurable date ranges:
+
+1. **Environment Variables**
+
+    - `MONTHLY_LIMIT_SECONDS`: Total allowed monthly usage in seconds (default: 600)
+    - `LIMIT_START_DATE`: Optional custom period start date (ISO format)
+    - `LIMIT_END_DATE`: Optional custom period end date (ISO format)
+
+2. **Usage Tracking**
+
+    ```mermaid
+    sequenceDiagram
+        participant U as User
+        participant API as API
+        participant DB as Database
+        participant RP as RunPod
+
+        U->>API: Request video generation
+        API->>DB: Check monthly usage
+        alt Usage Limit Exceeded
+            DB->>API: Return remaining seconds
+            API->>U: Return 403 with limit message
+        else Usage Within Limit
+            API->>RP: Submit video job
+            API->>DB: Increment usage
+            API->>U: Return success with remaining seconds
+        end
+    ```
+
+3. **Reset Behavior**
+    - Standard monthly reset: Usage resets on the 1st of each month
+    - Custom date range: Usage resets when entering the defined period
+    - Outside custom range: Falls back to standard monthly reset
+
+### Examples
+
+1. **Standard Monthly Cycle**
+
+    ```env
+    MONTHLY_LIMIT_SECONDS=600
+    # No LIMIT_START_DATE or LIMIT_END_DATE set
+    # Usage resets on the 1st of each month
+    ```
+
+2. **Custom Date Range**
+    ```env
+    MONTHLY_LIMIT_SECONDS=900
+    LIMIT_START_DATE=2023-12-16T00:00:00Z
+    LIMIT_END_DATE=2024-01-16T23:59:59Z
+    # Higher limit for holiday period
+    ```

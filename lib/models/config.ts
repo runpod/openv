@@ -12,6 +12,8 @@ export type ModelName = (typeof MODEL_NAMES)[number];
 
 export interface ModelConfig {
 	name: ModelName;
+	fps: number;
+	minimumQuotaSeconds: number; // Minimum quota needed to generate a video
 	limits: {
 		width: { min: number; max: number; default: number };
 		height: { min: number; max: number; default: number };
@@ -32,13 +34,15 @@ export interface ModelConfig {
 export const modelConfigs: Record<ModelName, ModelConfig> = {
 	"mochi-1": {
 		name: "mochi-1",
+		fps: 24,
+		minimumQuotaSeconds: 7 / 24, // 7 frames at 24 fps = ~0.29 seconds
 		limits: {
 			width: { min: 384, max: 848, default: 848 },
 			height: { min: 384, max: 848, default: 480 },
 			steps: { min: 10, max: 65, default: 40 },
 			cfg: { min: 1, max: 20, default: 6 },
 			numFrames: { min: 7, max: 127, default: 31 },
-			seed: { min: 0, max: Number.MAX_SAFE_INTEGER, default: 42 },
+			seed: { min: 0, max: 2147483647, default: 42 },
 			prompt: { minLength: 1, maxLength: 500 },
 			negativePrompt: { maxLength: 500 },
 		},

@@ -1,5 +1,6 @@
 import { UserRole } from "@prisma/client";
 
+import { checkMonthlyLimit, incrementMonthlyUsage } from "@/lib/monthly-limit";
 import prisma from "@/lib/prisma";
 
 export interface UserStatus {
@@ -11,6 +12,13 @@ export interface UserStatus {
 		expiresAt: Date;
 		isActive: boolean;
 	} | null;
+}
+
+export interface CheckVideoLimitResult {
+	allowed: boolean;
+	remainingSeconds: number;
+	error?: string;
+	status?: number;
 }
 
 export async function checkUserRole(userId: string, requiredRole: UserRole) {
@@ -27,6 +35,34 @@ export async function checkUserRole(userId: string, requiredRole: UserRole) {
 	}
 
 	return { user };
+}
+
+export async function checkVideoLimit(
+	userId: string,
+	durationInSeconds: number
+): Promise<CheckVideoLimitResult> {
+	const { allowed, remainingSeconds } = await checkMonthlyLimit({
+		userId,
+		requestedDuration: durationInSeconds,
+	});
+
+	if (!allowed) {
+		return {
+			allowed: false,
+			remainingSeconds,
+			error: "You have reached your monthly video generation limit.",
+			status: 403,
+		};
+	}
+
+	return { allowed: true, remainingSeconds };
+}
+
+export async function incrementVideoUsage(
+	userId: string,
+	durationInSeconds: number
+): Promise<void> {
+	await incrementMonthlyUsage(userId, durationInSeconds);
 }
 
 export async function getUserStatus(userId: string | null): Promise<UserStatus | null> {

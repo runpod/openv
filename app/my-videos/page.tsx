@@ -7,13 +7,15 @@ import { useEffect, useState } from "react";
 import { AccessRestricted } from "@/components/access-restricted";
 import { PromptInput } from "@/components/prompt-input";
 import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/components/ui/use-toast";
 import { VideoGrid } from "@/components/video-grid";
 import { useVideosStore } from "@/store/video-store";
 
 import { useMyVideos } from "./provider";
 
 export default function MyVideosPage() {
-	const { hasAccess } = useMyVideos();
+	const { toast } = useToast();
+	const { hasAccess, monthlyQuota, updateMonthlyQuota } = useMyVideos();
 	const {
 		videos,
 		isGenerating,
@@ -46,7 +48,17 @@ export default function MyVideosPage() {
 		queryFn: async () => {
 			const processingCount = getProcessingCount();
 			if (processingCount > 0) {
-				await fetchUpdatedVideos();
+				const response: {
+					monthlyQuota?: {
+						remainingSeconds: number;
+						currentUsage: number;
+						limitSeconds: number;
+					};
+				} = await fetchUpdatedVideos();
+				// Update quota if it's included in the response
+				if (response?.monthlyQuota) {
+					updateMonthlyQuota(response.monthlyQuota);
+				}
 			}
 			return null;
 		},
@@ -59,8 +71,6 @@ export default function MyVideosPage() {
 	}, [initialize]);
 
 	const handleGenerate = async () => {
-		if (!prompt || !hasAccess) return;
-
 		setIsGenerating(true);
 
 		try {
@@ -72,27 +82,61 @@ export default function MyVideosPage() {
 				body: JSON.stringify({
 					prompt,
 					modelName: "mochi-1",
-					frames: videoSettings.numFrames,
 					input: {
 						positive_prompt: prompt,
 						negative_prompt: videoSettings.negativePrompt,
 						width: videoSettings.width,
 						height: videoSettings.height,
-						seed: isRandomSeed ? Math.floor(Math.random() * 1000000) : seed,
 						steps: videoSettings.steps,
 						cfg: videoSettings.cfg,
 						num_frames: videoSettings.numFrames,
+						seed: videoSettings.seed,
 					},
 				}),
 			});
 
+			const data = await response.json();
+
 			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || "Failed to generate video");
+				// Update quota if the error response includes quota information
+				if (data.message?.includes("remaining in your monthly quota")) {
+					const remainingMatch = data.message.match(/(\d+\.?\d*) seconds/);
+					if (remainingMatch && monthlyQuota) {
+						const remainingSeconds = parseFloat(remainingMatch[1]);
+						const newQuota = {
+							...monthlyQuota,
+							remainingSeconds,
+							currentUsage: monthlyQuota.limitSeconds - remainingSeconds,
+						};
+						updateMonthlyQuota(newQuota);
+					}
+				}
+				toast({
+					variant: "destructive",
+					title: "Error",
+					description: data.message || data.error || "Failed to generate video",
+				});
+				throw new Error(data.message || data.error || "Failed to generate video");
 			}
 
-			const video = await response.json();
-			addVideo(video);
+			// Add video to state
+			addVideo(data);
+
+			if (data.monthlyQuota) {
+				updateMonthlyQuota(data.monthlyQuota);
+			}
+
+			if (isRandomSeed) {
+				// Generate a random seed within PostgreSQL INT4 range (max 2147483647)
+				const maxInt4 = 2147483647;
+				const newSeed = Math.floor(Math.random() * maxInt4);
+				console.log(
+					"Generating new random seed:",
+					JSON.stringify({ newSeed, maxInt4 }, null, 2)
+				);
+				setSeed(newSeed);
+				setVideoSettings({ ...videoSettings, seed: newSeed });
+			}
 		} catch (error) {
 			console.error("Error generating video:", error);
 		} finally {
@@ -147,6 +191,7 @@ export default function MyVideosPage() {
 								setIsRandomSeed={setIsRandomSeed}
 								queueItems={queueItems}
 								disabled={!hasAccess}
+								monthlyQuota={monthlyQuota}
 							/>
 						</div>
 					</div>

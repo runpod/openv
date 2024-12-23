@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { auth } from "@/lib/auth";
-import { validateVideoInput } from "@/lib/models/config";
-import { checkUserRole } from "@/lib/user";
+import { getModelConfig, validateVideoInput } from "@/lib/models/config";
+import { checkMonthlyLimit } from "@/lib/monthly-limit";
+import { checkUserRole, incrementVideoUsage } from "@/lib/user";
 import { checkConcurrentJobs } from "@/utils/data/video/videoCheck";
 import { createVideo } from "@/utils/data/video/videoCreate";
 import { videoSubmit } from "@/utils/data/video/videoSubmit";
@@ -23,15 +24,8 @@ export async function POST(request: Request) {
 			return NextResponse.json({ message: roleCheck.error }, { status: roleCheck.status });
 		}
 
-		// Check concurrent jobs
-		const { count, allowed, error } = await checkConcurrentJobs(userId);
-		if (!allowed) {
-			return NextResponse.json({ error, count }, { status: 409 });
-		}
-
-		// Parse and validate request body
+		// Validate the request based on the given model
 		const body = await request.json();
-
 		let validatedInput;
 		try {
 			validatedInput = validateVideoInput(body);
@@ -49,6 +43,35 @@ export async function POST(request: Request) {
 				);
 			}
 			throw e;
+		}
+
+		// Calculate duration in seconds based on frames and fps
+		const fps = getModelConfig(validatedInput.modelName).fps;
+		const durationInSeconds = validatedInput.input.num_frames / fps;
+
+		// Check monthly limit
+		const { allowed, remainingSeconds } = await checkMonthlyLimit({
+			userId,
+			requestedDuration: durationInSeconds,
+		});
+		if (!allowed) {
+			return NextResponse.json(
+				{
+					error: "Monthly limit exceeded",
+					message: `You have ${remainingSeconds.toFixed(2)} seconds remaining in your monthly quota`,
+				},
+				{ status: 403 }
+			);
+		}
+
+		// Check concurrent jobs
+		const {
+			count,
+			allowed: concurrentAllowed,
+			error: concurrentError,
+		} = await checkConcurrentJobs(userId);
+		if (!concurrentAllowed) {
+			return NextResponse.json({ error: concurrentError, count }, { status: 409 });
 		}
 
 		// Create initial video record
@@ -84,9 +107,25 @@ export async function POST(request: Request) {
 			);
 		}
 
+		// Increment monthly usage
+		await incrementVideoUsage(userId, durationInSeconds);
+
 		// Get updated job count after successful creation
 		const { count: updatedCount } = await checkConcurrentJobs(userId);
-		return NextResponse.json({ ...createdVideo, count: updatedCount });
+
+		// Get monthly limit from env for response
+		const monthlyLimitSeconds = parseInt(process.env.MONTHLY_LIMIT_SECONDS || "60", 10);
+		const currentUsage = monthlyLimitSeconds - remainingSeconds;
+
+		return NextResponse.json({
+			...createdVideo,
+			count: updatedCount,
+			monthlyQuota: {
+				remainingSeconds,
+				currentUsage,
+				limitSeconds: monthlyLimitSeconds,
+			},
+		});
 	} catch (error: any) {
 		console.error("Error in video generation:", error);
 		return NextResponse.json(
