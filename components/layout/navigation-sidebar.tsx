@@ -1,11 +1,10 @@
 "use client";
 
-import { SignOutButton, useUser } from "@clerk/nextjs";
+import { SignOutButton } from "@clerk/nextjs";
 import { Bug, Folder, Github, HomeIcon, LogOut, MessageCircle, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/ui/logo";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -13,7 +12,6 @@ import {
 	SidebarContent,
 	SidebarGroup,
 	SidebarGroupContent,
-	SidebarGroupLabel,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
@@ -56,17 +54,17 @@ const externalNavItems = [
 
 export function NavigationSidebar() {
 	const pathname = usePathname();
-	const { user } = useUser();
 
 	return (
 		<Sidebar>
 			<SidebarContent>
-				<div className="mb-6 mt-12 flex justify-center">
-					<Logo />
-				</div>
+				<SidebarGroup>
+					<div className="mb-6 mt-12 flex justify-center">
+						<Logo />
+					</div>
+				</SidebarGroup>
 				{/* Main Navigation */}
 				<SidebarGroup>
-					<SidebarGroupLabel>Navigation</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
 							{mainNavItems.map(item => (
@@ -122,26 +120,7 @@ export function NavigationSidebar() {
 
 				{/* User Section */}
 				<SidebarGroup className="mt-auto">
-					<SidebarGroupLabel>Account</SidebarGroupLabel>
 					<SidebarGroupContent>
-						{/* User Info */}
-						<div className="px-3 mb-2">
-							<div className="flex items-center gap-2">
-								<Avatar className="h-8 w-8">
-									<AvatarImage src={user?.imageUrl} />
-									<AvatarFallback>
-										{user?.firstName?.charAt(0)}
-										{user?.lastName?.charAt(0)}
-									</AvatarFallback>
-								</Avatar>
-								<div className="flex flex-col">
-									<span className="text-xs font-medium text-muted-foreground">
-										{user?.emailAddresses?.[0]?.emailAddress}
-									</span>
-								</div>
-							</div>
-						</div>
-
 						{/* Account Menu */}
 						<SidebarMenu>
 							<SidebarMenuItem>
