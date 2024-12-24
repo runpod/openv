@@ -4,8 +4,7 @@ import { ZodError } from "zod";
 
 import { auth } from "@/lib/auth";
 import { getModelConfig, validateVideoInput } from "@/lib/models/config";
-import { checkMonthlyLimit } from "@/lib/monthly-limit";
-import { checkUserRole, incrementVideoUsage } from "@/lib/user";
+import { checkUserRole, checkVideoLimit, incrementVideoUsage } from "@/lib/user";
 import { checkConcurrentJobs } from "@/utils/data/video/videoCheck";
 import { createVideo } from "@/utils/data/video/videoCreate";
 import { videoSubmit } from "@/utils/data/video/videoSubmit";
@@ -49,20 +48,33 @@ export async function POST(request: Request) {
 		const fps = getModelConfig(validatedInput.modelName).fps;
 		const durationInSeconds = validatedInput.input.num_frames / fps;
 
+		// Get model config for frame limits
+		const modelConfig = getModelConfig(validatedInput.modelName);
+		const limits = modelConfig.limits;
+
 		// Check monthly limit
-		const { allowed, remainingSeconds } = await checkMonthlyLimit({
+		const { allowed, remainingSeconds, suggestedFrames } = await checkVideoLimit(
 			userId,
-			requestedDuration: durationInSeconds,
-		});
+			durationInSeconds,
+			fps,
+			limits.numFrames.min,
+			limits.numFrames.max
+		);
+
 		if (!allowed) {
 			return NextResponse.json(
 				{
 					error: "Monthly limit exceeded",
 					message: `You have ${remainingSeconds.toFixed(2)} seconds remaining in your monthly quota`,
+					suggestedFrames,
 				},
 				{ status: 403 }
 			);
 		}
+
+		// If there's a suggested frame count, use that instead
+		const finalFrameCount = suggestedFrames || validatedInput.input.num_frames;
+		const finalDuration = finalFrameCount / fps;
 
 		// Check concurrent jobs
 		const {
@@ -79,7 +91,7 @@ export async function POST(request: Request) {
 			userId,
 			prompt: validatedInput.prompt,
 			modelName: validatedInput.modelName,
-			frames: validatedInput.input.num_frames,
+			frames: finalFrameCount,
 			negativePrompt: validatedInput.input.negative_prompt,
 			width: validatedInput.input.width,
 			height: validatedInput.input.height,
@@ -107,21 +119,21 @@ export async function POST(request: Request) {
 			);
 		}
 
-		// Increment monthly usage
-		await incrementVideoUsage(userId, durationInSeconds);
+		// Increment monthly usage with the final duration
+		await incrementVideoUsage(userId, finalDuration);
 
 		// Get updated job count after successful creation
 		const { count: updatedCount } = await checkConcurrentJobs(userId);
 
 		// Get monthly limit from env for response
 		const monthlyLimitSeconds = parseInt(process.env.MONTHLY_LIMIT_SECONDS || "60", 10);
-		const currentUsage = monthlyLimitSeconds - remainingSeconds;
+		const currentUsage = monthlyLimitSeconds - (remainingSeconds - finalDuration);
 
 		return NextResponse.json({
 			...createdVideo,
 			count: updatedCount,
 			monthlyQuota: {
-				remainingSeconds,
+				remainingSeconds: remainingSeconds - finalDuration,
 				currentUsage,
 				limitSeconds: monthlyLimitSeconds,
 			},

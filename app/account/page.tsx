@@ -108,10 +108,12 @@ export default async function AccountPage() {
 										used
 									</span>
 									<span className="text-muted-foreground">
-										{remainingSeconds.toFixed(2)} seconds remaining
+										{remainingSeconds <= 0
+											? "No quota remaining"
+											: `${remainingSeconds.toFixed(2)} seconds remaining`}
 									</span>
 								</div>
-								<Progress value={usagePercentage} className="h-2" />
+								<Progress value={Math.min(usagePercentage, 100)} className="h-2" />
 							</div>
 						</CardContent>
 					</Card>

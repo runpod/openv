@@ -19,6 +19,116 @@ export interface CheckVideoLimitResult {
 	remainingSeconds: number;
 	error?: string;
 	status?: number;
+	suggestedFrames?: number | null;
+}
+
+interface QuotaCheckParams {
+	remainingSeconds: number;
+	requestedDuration: number;
+	possibleLengths: Array<{ frames: number; duration: number }>;
+}
+
+export function checkQuotaAllowance({
+	remainingSeconds,
+	requestedDuration,
+	possibleLengths,
+}: QuotaCheckParams): { allowed: boolean; suggestedFrames: number | null } {
+	// If we have no quota left, don't allow generation
+	if (remainingSeconds <= 0) {
+		return { allowed: false, suggestedFrames: null };
+	}
+
+	// Get the minimum possible duration from the first length
+	const minimumDuration = possibleLengths[0].duration;
+
+	// If we have less than the minimum duration remaining, but more than 0,
+	// we should still allow generating at the minimum length
+	if (remainingSeconds < minimumDuration) {
+		// If the requested duration is the minimum duration, allow it
+		if (requestedDuration === minimumDuration) {
+			return { allowed: true, suggestedFrames: null };
+		}
+		// Otherwise suggest the minimum duration
+		return {
+			allowed: false,
+			suggestedFrames: possibleLengths[0].frames,
+		};
+	}
+
+	// Find the length that's just above the remaining quota
+	const nextPossibleLength = possibleLengths.find(length => length.duration > remainingSeconds);
+
+	// Find the length that's just below the remaining quota
+	const currentPossibleLength = [...possibleLengths]
+		.reverse()
+		.find(length => length.duration <= remainingSeconds);
+
+	// If we can't find a possible length, don't allow generation
+	if (!currentPossibleLength) {
+		return { allowed: false, suggestedFrames: null };
+	}
+
+	// Find the next length after the current requested duration
+	const nextLengthAfterCurrent = possibleLengths.find(
+		length => length.duration > requestedDuration
+	);
+
+	// If the current video length is:
+	// 1. Less than or equal to the current possible length, OR
+	// 2. Equal to the next possible length (exact match), OR
+	// 3. Between two steps and the next step is within quota
+	const isAllowed = !!(
+		requestedDuration <= currentPossibleLength.duration ||
+		(nextPossibleLength && requestedDuration === nextPossibleLength.duration) ||
+		(nextLengthAfterCurrent && nextLengthAfterCurrent.duration <= remainingSeconds)
+	);
+
+	return {
+		allowed: isAllowed,
+		suggestedFrames: isAllowed ? null : currentPossibleLength.frames,
+	};
+}
+
+export async function checkVideoLimit(
+	userId: string,
+	durationInSeconds: number,
+	fps: number = 24,
+	numFramesMin: number = 31,
+	numFramesMax: number = 127
+): Promise<CheckVideoLimitResult> {
+	// Get remaining seconds from monthly limit
+	const { remainingSeconds } = await checkMonthlyLimit({
+		userId,
+		requestedDuration: durationInSeconds,
+	});
+
+	// Generate possible lengths
+	const possibleLengths = [];
+	for (let i = numFramesMin; i <= numFramesMax; i += 6) {
+		possibleLengths.push({
+			frames: i,
+			duration: i / fps,
+		});
+	}
+
+	// Check if the requested duration is allowed with rounding up
+	const { allowed, suggestedFrames } = checkQuotaAllowance({
+		remainingSeconds,
+		requestedDuration: durationInSeconds,
+		possibleLengths,
+	});
+
+	if (!allowed) {
+		return {
+			allowed: false,
+			remainingSeconds,
+			suggestedFrames,
+			error: "You have reached your monthly video generation limit.",
+			status: 403,
+		};
+	}
+
+	return { allowed: true, remainingSeconds, suggestedFrames };
 }
 
 export async function checkUserRole(userId: string, requiredRole: UserRole) {
@@ -35,27 +145,6 @@ export async function checkUserRole(userId: string, requiredRole: UserRole) {
 	}
 
 	return { user };
-}
-
-export async function checkVideoLimit(
-	userId: string,
-	durationInSeconds: number
-): Promise<CheckVideoLimitResult> {
-	const { allowed, remainingSeconds } = await checkMonthlyLimit({
-		userId,
-		requestedDuration: durationInSeconds,
-	});
-
-	if (!allowed) {
-		return {
-			allowed: false,
-			remainingSeconds,
-			error: "You have reached your monthly video generation limit.",
-			status: 403,
-		};
-	}
-
-	return { allowed: true, remainingSeconds };
 }
 
 export async function incrementVideoUsage(

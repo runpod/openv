@@ -71,6 +71,14 @@ export function PromptInput({
 			return;
 		}
 		onGenerate();
+
+		// If we're using a suggested frame count, update the video settings
+		if (quotaCheck.suggestedFrames) {
+			setVideoSettings({
+				...videoSettings,
+				numFrames: quotaCheck.suggestedFrames,
+			});
+		}
 	};
 
 	const handleAspectRatioChange = (aspectRatio: "16:9" | "9:16" | "1:1") => {
@@ -90,17 +98,9 @@ export function PromptInput({
 	};
 
 	const handleSeedChange = (newSeed: number, isRandom: boolean) => {
-		console.log(
-			"Seed change:",
-			JSON.stringify({ newSeed, isRandom, currentSeed: seed }, null, 2)
-		);
 		setSeed(newSeed);
 		setIsRandomSeed(isRandom);
 		setVideoSettings({ ...videoSettings, seed: newSeed });
-		console.log(
-			"After seed change:",
-			JSON.stringify({ newSeed, videoSettings: { ...videoSettings, seed: newSeed } }, null, 2)
-		);
 	};
 
 	const handleNegativePromptChange = (negativePrompt: string) => {
@@ -117,10 +117,6 @@ export function PromptInput({
 	const fps = modelConfig.fps;
 	const estimatedDuration = videoSettings.numFrames / fps;
 
-	// Check if we have enough quota for even the minimum video length
-	const hasNoQuotaLeft =
-		monthlyQuota && monthlyQuota.remainingSeconds < modelConfig.minimumQuotaSeconds;
-
 	// Get all possible frame counts and their durations
 	const possibleLengths = useMemo(() => {
 		const lengths = [];
@@ -133,9 +129,31 @@ export function PromptInput({
 		return lengths;
 	}, [fps, limits.numFrames.min, limits.numFrames.max]);
 
-	// Check if current duration would exceed quota, considering the next higher length
-	const wouldExceedQuota = useMemo(() => {
-		if (!monthlyQuota) return false;
+	// Check if current duration would exceed quota and get suggested frames if needed
+	const quotaCheck = useMemo(() => {
+		if (!monthlyQuota) return { wouldExceedQuota: false, suggestedFrames: null };
+
+		// If we have no quota left, don't allow generation
+		if (monthlyQuota.remainingSeconds <= 0) {
+			return { wouldExceedQuota: true, suggestedFrames: null };
+		}
+
+		// Get the minimum possible duration from the first length
+		const minimumDuration = possibleLengths[0].duration;
+
+		// If we have less than the minimum duration remaining, but more than 0,
+		// we should still allow generating at the minimum length
+		if (monthlyQuota.remainingSeconds < minimumDuration) {
+			// If the requested duration is the minimum duration, allow it
+			if (estimatedDuration === minimumDuration) {
+				return { wouldExceedQuota: false, suggestedFrames: null };
+			}
+			// Otherwise suggest the minimum duration
+			return {
+				wouldExceedQuota: true,
+				suggestedFrames: possibleLengths[0].frames,
+			};
+		}
 
 		// Find the length that's just above the remaining quota
 		const nextPossibleLength = possibleLengths.find(
@@ -148,49 +166,37 @@ export function PromptInput({
 			.find(length => length.duration <= monthlyQuota.remainingSeconds);
 
 		// If we can't find a possible length, don't allow generation
-		if (!currentPossibleLength) return true;
+		if (!currentPossibleLength) {
+			return { wouldExceedQuota: true, suggestedFrames: null };
+		}
 
-		// If the current video length is less than or equal to the current possible length,
-		// or if it's the next possible length, allow generation
-		return !(
+		// Find the next length after the current estimated duration
+		const nextLengthAfterCurrent = possibleLengths.find(
+			length => length.duration > estimatedDuration
+		);
+
+		// If the current video length is:
+		// 1. Less than or equal to the current possible length, OR
+		// 2. Equal to the next possible length (exact match), OR
+		// 3. Between two steps and the next step is within quota
+		const isAllowed =
 			estimatedDuration <= currentPossibleLength.duration ||
-			(nextPossibleLength && estimatedDuration === nextPossibleLength.duration)
-		);
-	}, [monthlyQuota, estimatedDuration, possibleLengths]);
+			(nextPossibleLength && estimatedDuration === nextPossibleLength.duration) ||
+			(nextLengthAfterCurrent &&
+				nextLengthAfterCurrent.duration <= monthlyQuota.remainingSeconds);
 
-	// Debug log for quota calculations
-	useEffect(() => {
-		console.log(
-			"Quota Calculations:",
-			JSON.stringify(
-				{
-					currentFrames: videoSettings.numFrames,
-					estimatedDuration: estimatedDuration.toFixed(2),
-					remainingSeconds: monthlyQuota?.remainingSeconds.toFixed(2),
-					wouldExceedQuota,
-					possibleLengths: possibleLengths.map(l => ({
-						frames: l.frames,
-						duration: l.duration.toFixed(2),
-					})),
-				},
-				null,
-				2
-			)
-		);
-	}, [
-		estimatedDuration,
-		monthlyQuota?.remainingSeconds,
-		wouldExceedQuota,
-		possibleLengths,
-		videoSettings.numFrames,
-	]);
+		return {
+			wouldExceedQuota: !isAllowed,
+			suggestedFrames: isAllowed ? null : currentPossibleLength.frames,
+		};
+	}, [monthlyQuota, estimatedDuration, possibleLengths]);
 
 	// Evaluate all conditions that could disable the button
 	const buttonState = useMemo<ButtonState>(() => {
 		const state = {
 			isDisabled: false,
 			reason: "",
-			suggestedFrames: null as number | null,
+			suggestedFrames: quotaCheck.suggestedFrames,
 		};
 
 		if (prompt.trim() === "") {
@@ -208,12 +214,13 @@ export function PromptInput({
 		} else if (disabled) {
 			state.isDisabled = true;
 			state.reason = "Add a voucher to enable video generation";
-		} else if (hasNoQuotaLeft) {
+		} else if (quotaCheck.wouldExceedQuota) {
 			state.isDisabled = true;
-			state.reason = "You have reached your monthly video generation limit";
-		} else if (wouldExceedQuota) {
-			state.isDisabled = true;
-			state.reason = `Video too long. You have ${monthlyQuota?.remainingSeconds.toFixed(2)}s remaining`;
+			if (monthlyQuota && monthlyQuota.remainingSeconds <= 0) {
+				state.reason = "You have no monthly quota anymore :(";
+			} else {
+				state.reason = `Video too long. You have ${monthlyQuota?.remainingSeconds.toFixed(2)}s remaining`;
+			}
 		}
 
 		return state;
@@ -224,83 +231,26 @@ export function PromptInput({
 		limits.prompt.maxLength,
 		isQueueFull,
 		disabled,
-		hasNoQuotaLeft,
-		wouldExceedQuota,
+		quotaCheck.wouldExceedQuota,
 		monthlyQuota?.remainingSeconds,
-		fps,
+		quotaCheck.suggestedFrames,
 	]);
 
 	// Auto-adjust video length if a better length is suggested
 	useEffect(() => {
-		if (buttonState.suggestedFrames && !buttonState.isDisabled) {
+		if (quotaCheck.suggestedFrames && !buttonState.isDisabled) {
 			setVideoSettings({
 				...videoSettings,
-				numFrames: buttonState.suggestedFrames,
+				numFrames: quotaCheck.suggestedFrames,
 			});
 		}
-	}, [buttonState.suggestedFrames, buttonState.isDisabled, setVideoSettings, videoSettings]);
-
-	// Debug logs
-	useEffect(() => {
-		console.log(
-			"Button State:",
-			JSON.stringify(
-				{
-					numFrames: videoSettings.numFrames,
-					fps,
-					estimatedDuration: estimatedDuration.toFixed(2),
-					remainingSeconds: monthlyQuota?.remainingSeconds.toFixed(2),
-					wouldExceedQuota,
-					otherConditions: {
-						emptyPrompt: prompt.trim() === "",
-						isGenerating,
-						promptTooLong: charCount > limits.prompt.maxLength,
-						isQueueFull,
-						disabled,
-						hasNoQuotaLeft,
-					},
-					buttonState: {
-						isDisabled: buttonState.isDisabled,
-						reason: buttonState.reason,
-					},
-				},
-				null,
-				2
-			)
-		);
-	}, [
-		videoSettings.numFrames,
-		monthlyQuota?.remainingSeconds,
-		estimatedDuration,
-		wouldExceedQuota,
-		prompt,
-		isGenerating,
-		charCount,
-		isQueueFull,
-		disabled,
-		hasNoQuotaLeft,
-		buttonState,
-		fps,
-		limits.prompt.maxLength,
-	]);
+	}, [quotaCheck.suggestedFrames, buttonState.isDisabled, setVideoSettings, videoSettings]);
 
 	const maxInt4 = 2147483647;
 
 	// Validate seed values on mount
 	useEffect(() => {
 		if (seed > maxInt4 || videoSettings.seed > maxInt4) {
-			console.log(
-				"Fixing invalid seed values:",
-				JSON.stringify(
-					{
-						oldSeed: seed,
-						oldVideoSettingsSeed: videoSettings.seed,
-						maxInt4,
-					},
-					null,
-					2
-				)
-			);
 			const newSeed = Math.min(maxInt4, seed);
 			setSeed(newSeed);
 			setVideoSettings({
@@ -308,7 +258,7 @@ export function PromptInput({
 				seed: newSeed,
 			});
 		}
-	}, []); // Only run on mount
+	}, []);
 
 	return (
 		<div className="relative bg-secondary p-2 rounded-lg shadow-md">

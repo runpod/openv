@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 
 interface MonthlyQuota {
 	remainingSeconds: number;
@@ -33,15 +33,9 @@ export function MyVideosProvider({
 }) {
 	const [monthlyQuota, setMonthlyQuota] = useState<MonthlyQuota | undefined>(initialQuota);
 
-	useEffect(() => {
-		console.log("Provider - Initial quota:", JSON.stringify(initialQuota, null, 2));
-		console.log("Provider - Current quota state:", JSON.stringify(monthlyQuota, null, 2));
-	}, [initialQuota, monthlyQuota]);
-
-	const updateMonthlyQuota = (quota: MonthlyQuota) => {
-		console.log("Provider - Updating quota to:", JSON.stringify(quota, null, 2));
-		setMonthlyQuota(quota);
-	};
+	const updateMonthlyQuota = useCallback((newQuota: MonthlyQuota) => {
+		setMonthlyQuota(newQuota);
+	}, []);
 
 	return (
 		<MyVideosContext.Provider value={{ hasAccess, monthlyQuota, updateMonthlyQuota }}>
