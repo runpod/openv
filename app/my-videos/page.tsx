@@ -48,16 +48,9 @@ export default function MyVideosPage() {
 		queryFn: async () => {
 			const processingCount = getProcessingCount();
 			if (processingCount > 0) {
-				const response: {
-					monthlyQuota?: {
-						remainingSeconds: number;
-						currentUsage: number;
-						limitSeconds: number;
-					};
-				} = await fetchUpdatedVideos();
-				// Update quota if it's included in the response
-				if (response?.monthlyQuota) {
-					updateMonthlyQuota(response.monthlyQuota);
+				const { monthlyQuota: updatedQuota } = await fetchUpdatedVideos();
+				if (updatedQuota) {
+					updateMonthlyQuota(updatedQuota);
 				}
 			}
 			return null;
@@ -97,20 +90,12 @@ export default function MyVideosPage() {
 
 			const data = await response.json();
 
+			// Always update quota if it's included in the response
+			if (data.monthlyQuota) {
+				updateMonthlyQuota(data.monthlyQuota);
+			}
+
 			if (!response.ok) {
-				// Update quota if the error response includes quota information
-				if (data.message?.includes("remaining in your monthly quota")) {
-					const remainingMatch = data.message.match(/(\d+\.?\d*) seconds/);
-					if (remainingMatch && monthlyQuota) {
-						const remainingSeconds = parseFloat(remainingMatch[1]);
-						const newQuota = {
-							...monthlyQuota,
-							remainingSeconds,
-							currentUsage: monthlyQuota.limitSeconds - remainingSeconds,
-						};
-						updateMonthlyQuota(newQuota);
-					}
-				}
 				toast({
 					variant: "destructive",
 					title: "Error",
@@ -121,10 +106,6 @@ export default function MyVideosPage() {
 
 			// Add video to state
 			addVideo(data);
-
-			if (data.monthlyQuota) {
-				updateMonthlyQuota(data.monthlyQuota);
-			}
 
 			if (isRandomSeed) {
 				// Generate a random seed within PostgreSQL INT4 range (max 2147483647)
