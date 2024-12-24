@@ -27,7 +27,6 @@ export function useVideoStatus(jobId: string | null) {
 		queryKey: ["video-status", jobId],
 		queryFn: async () => {
 			if (!jobId) return null;
-			console.log("Fetching status for:", jobId);
 			const response = await fetch(`/api/runpod/${jobId}`);
 			if (!response.ok) {
 				throw new Error("Failed to fetch video status");
@@ -39,10 +38,8 @@ export function useVideoStatus(jobId: string | null) {
 		refetchInterval: query => {
 			const data = query.state.data as VideoResponse | null;
 			if (data && (data.status === "queued" || data.status === "processing")) {
-				console.log("Continuing to poll...");
 				return 3000;
 			}
-			console.log("Stopping poll - terminal status reached");
 			return false;
 		},
 		retry: true,
@@ -70,7 +67,6 @@ export function useCreateVideo() {
 			}
 
 			const data = await response.json();
-			console.log("Created video with ID:", data.id);
 			return data as VideoResponse;
 		},
 		onSuccess: data => {

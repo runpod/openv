@@ -9,7 +9,6 @@ const runpod = runpodSdk(process.env.RUNPOD_API_KEY!) as any;
 export async function GET(request: Request, context: { params: Promise<{ jobId: string }> }) {
 	try {
 		const { jobId } = await context.params;
-		console.log("[RunPod Status] Starting request for jobId:", jobId);
 
 		if (!jobId) {
 			console.error("[RunPod Status] No jobId provided");
@@ -22,9 +21,7 @@ export async function GET(request: Request, context: { params: Promise<{ jobId: 
 		}
 
 		try {
-			console.log("[RunPod Status] Making RunPod API call for jobId:", jobId);
 			const result = await runpod.endpoint(process.env.RUNPOD_ENDPOINT_ID!).status(jobId);
-			console.log("[RunPod Status] Raw API response:", JSON.stringify(result, null, 2));
 
 			if (!result) {
 				console.error("[RunPod Status] Empty result from RunPod");
@@ -33,19 +30,16 @@ export async function GET(request: Request, context: { params: Promise<{ jobId: 
 
 			if ("error" in result) {
 				console.error("[RunPod Status] RunPod API error:", result.error);
-				console.log("[RunPod Status] Updating video with error status");
 				const updateResult = await videoUpdate({
 					jobId,
 					status: "failed",
 					error: result.error,
 				});
-				console.log("[RunPod Status] Video update result:", updateResult);
 				return NextResponse.json({ error: result.error }, { status: 500 });
 			}
 
 			// Map RunPod status to our status
 			let status = result.status.toLowerCase();
-			console.log("[RunPod Status] Original status:", result.status);
 
 			if (status === "in_queue" || status === "queued") status = "queued";
 			if (status === "in_progress" || status === "processing") status = "processing";
@@ -54,15 +48,7 @@ export async function GET(request: Request, context: { params: Promise<{ jobId: 
 			if (status === "cancelled") status = "failed";
 			if (status === "timed_out") status = "failed";
 
-			console.log("[RunPod Status] Mapped status:", status);
-
 			// Update video status in database
-			console.log("[RunPod Status] Updating video with status:", {
-				jobId,
-				status,
-				url: result.output?.result,
-			});
-
 			const { error: dbError } = await videoUpdate({
 				jobId,
 				status,
@@ -79,7 +65,6 @@ export async function GET(request: Request, context: { params: Promise<{ jobId: 
 				);
 			}
 
-			console.log("[RunPod Status] Successfully processed status update");
 			return NextResponse.json(result);
 		} catch (runpodError) {
 			console.error("[RunPod Status] API call error details:", {
@@ -88,13 +73,11 @@ export async function GET(request: Request, context: { params: Promise<{ jobId: 
 				stack: runpodError instanceof Error ? runpodError.stack : undefined,
 			});
 
-			console.log("[RunPod Status] Updating video with failed status");
 			const updateResult = await videoUpdate({
 				jobId,
 				status: "failed",
 				error: runpodError instanceof Error ? runpodError.message : "Unknown error",
 			});
-			console.log("[RunPod Status] Video update result:", updateResult);
 
 			return NextResponse.json(
 				{

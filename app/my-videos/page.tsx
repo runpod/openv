@@ -130,10 +130,6 @@ export default function MyVideosPage() {
 				// Generate a random seed within PostgreSQL INT4 range (max 2147483647)
 				const maxInt4 = 2147483647;
 				const newSeed = Math.floor(Math.random() * maxInt4);
-				console.log(
-					"Generating new random seed:",
-					JSON.stringify({ newSeed, maxInt4 }, null, 2)
-				);
 				setSeed(newSeed);
 				setVideoSettings({ ...videoSettings, seed: newSeed });
 			}
