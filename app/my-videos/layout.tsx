@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { MyVideosProvider } from "@/app/my-videos/provider";
 import AuthenticatedLayout from "@/components/layout/authenticated-layout";
+import { getMonthlyQuota } from "@/lib/monthly-limit";
 import prisma from "@/lib/prisma";
 import { checkTermsAcceptance } from "@/lib/terms";
 
@@ -40,24 +41,13 @@ export default async function MyVideosLayout({ children }: { children: React.Rea
 		where: { user_id: userId },
 		select: {
 			role: true,
-			monthlyUsage: true,
 		},
 	});
 
 	const hasAccess = user?.role === UserRole.user;
 
-	// Get monthly limit from env
-	const monthlyLimitSeconds = parseInt(process.env.MONTHLY_LIMIT_SECONDS || "60", 10);
-	const currentUsage = user?.monthlyUsage || 0;
-	const remainingSeconds = monthlyLimitSeconds - currentUsage;
-
-	const monthlyQuota = hasAccess
-		? {
-				remainingSeconds,
-				currentUsage,
-				limitSeconds: monthlyLimitSeconds,
-			}
-		: undefined;
+	// Get monthly quota using the function that handles resets
+	const monthlyQuota = hasAccess ? await getMonthlyQuota(userId) : undefined;
 
 	return (
 		<AuthenticatedLayout>
