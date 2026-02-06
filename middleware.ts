@@ -1,9 +1,23 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export default process.env.NEXT_PUBLIC_TEST_MODE === "true"
-	? () => NextResponse.next()
-	: clerkMiddleware();
+const REDIRECTED_PATHS = [
+	"/sign-in",
+	"/sign-up",
+	"/my-videos",
+	"/account",
+	"/inspiration",
+	"/terms",
+];
+
+export default function middleware(request: NextRequest) {
+	const { pathname } = request.nextUrl;
+
+	if (REDIRECTED_PATHS.some(path => pathname.startsWith(path))) {
+		return NextResponse.redirect(new URL("/", request.url));
+	}
+
+	return NextResponse.next();
+}
 
 export const config = {
 	matcher: [

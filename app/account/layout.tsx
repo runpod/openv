@@ -1,5 +1,5 @@
-import AuthenticatedLayout from "@/components/layout/authenticated-layout";
+import { redirect } from "next/navigation";
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
-	return <AuthenticatedLayout>{children}</AuthenticatedLayout>;
+	redirect("/");
 }

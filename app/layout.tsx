@@ -1,12 +1,10 @@
 import "@fontsource/inter";
 import "./globals.css";
 
-import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ReactNode } from "react";
 
-import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
@@ -40,14 +38,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<body className={cn("min-h-screen bg-background antialiased", inter.className)}>
-				<ClerkProvider>
-					<ThemeProvider attribute="class" defaultTheme="dark">
-						<QueryProvider>
-							{children}
-							<Toaster />
-						</QueryProvider>
-					</ThemeProvider>
-				</ClerkProvider>
+				<ThemeProvider attribute="class" defaultTheme="dark">
+					{children}
+					<Toaster />
+				</ThemeProvider>
 			</body>
 		</html>
 	);

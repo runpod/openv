@@ -7,6 +7,8 @@ import { Progress } from "@/components/ui/progress";
 import { VoucherForm } from "@/components/voucher-form";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function AccountPage() {
 	const { userId } = await auth();
 	const user = await currentUser();
