@@ -36,7 +36,7 @@ export default function Page() {
 									target="_blank"
 									rel="noopener noreferrer"
 								>
-									RunPod
+									Runpod
 								</Link>{" "}
 								for{" "}
 								<Link
