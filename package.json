@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "build": "yarn lint:fix && next build",
-    "vercel-build": "prisma migrate deploy && yarn build",
+    "vercel-build": "yarn build",
     "start": "next start",
     "prisma:migrate": "dotenv -e .env.local -- npx prisma migrate dev",
     "prisma:studio": "dotenv -e .env.local -- npx prisma studio",
